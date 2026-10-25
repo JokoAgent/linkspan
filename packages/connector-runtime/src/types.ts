@@ -77,7 +77,9 @@ export interface NgrokConfig extends BaseConfig {
 }
 export interface PinggyConfig extends BaseConfig {
   readonly provider: "pinggy";
-  readonly mode: "http" | "tls";
+  readonly mode: "http" | "tls" | "tcp" | "tlstcp";
+  /** TLSTCP offers raw TCP and a supplier-terminated TLS wrapper. Select one. */
+  readonly tlstcpEndpoint?: "tcp" | "tls";
   readonly token?: string;
   readonly publicOrigin?: string;
   /** Explicitly prepared SDK copy containing only this target's pinned native addon. */
@@ -107,7 +109,7 @@ export interface SshConfig extends BaseConfig {
 export interface FrpConfig extends BaseConfig {
   readonly provider: "frp";
   readonly helper: ConnectorHelper;
-  readonly mode: "tcp" | "https";
+  readonly mode: "tcp" | "http" | "https";
   readonly serverAddress: string;
   readonly serverPort: number;
   readonly token: string;

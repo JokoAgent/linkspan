@@ -3,6 +3,7 @@ import { connect, type Socket } from "node:net";
 import type { EventEmitter } from "node:events";
 import type { Connector, ConnectorOptions, PinggyConfig } from "@jokoagent/linkspan-connector-runtime";
 import { invalid, publicOrigin, startWithLifecycle } from "@jokoagent/linkspan-connector-runtime/runtime";
+import { pinggyByteMode } from "./sdk.js";
 
 interface Client extends EventEmitter {
   connect(config: object): void;
@@ -20,9 +21,10 @@ export async function startSsh(config: PinggyConfig, options: ConnectorOptions):
   if (config.token !== undefined && !/^[A-Za-z0-9_-]{1,512}$/u.test(config.token)) invalid("The publisher tunnel token is invalid.");
   const server = config.serverAddress ?? (config.token === undefined ? "free.pinggy.io" : "pro.pinggy.io");
   if (!/^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/u.test(server)) invalid("The selected Pinggy SSH service hostname is invalid.");
-  if (config.mode === "tls" && !config.publicOrigin) invalid("A certificate-matching public origin is required for TLS passthrough.");
+  if (config.mode !== "http" && !config.publicOrigin) invalid("A certificate-matching public origin is required for TLS/TCP passthrough.");
+  const mode = pinggyByteMode(config);
   const bounded = config.budget.paidEnabled ? config : { ...config, budget: { ...config.budget, maximumSessionMs: Math.min(config.budget.maximumSessionMs, 3_600_000) } };
-  return startWithLifecycle(bounded, options, config.mode === "http" ? "http" : "tls", async bridge => {
+  return startWithLifecycle(bounded, options, mode.bridge, async bridge => {
     const name = "ssh2"; const sdk = await import(name) as { Client: new () => Client };
     const client = new sdk.Client(); const streams = new Set<Socket>();
     let resolveClosed!: () => void; let rejectClosed!: () => void;
@@ -50,9 +52,10 @@ export async function startSsh(config: PinggyConfig, options: ConnectorOptions):
           let buffer = "";
           const observe = (data: Buffer): void => {
             buffer = (buffer + data.toString("utf8")).slice(-8192);
-            const urls = buffer.match(/(?:https|tls):\/\/[A-Za-z0-9.-]+(?::[0-9]+)?/gu) ?? [];
+            const urls = buffer.match(/(?:https|tls|tcp|tlstcp):\/\/[A-Za-z0-9.-]+(?::[0-9]+)?/gu) ?? [];
             for (const value of urls) {
-              const url = value.replace(/^tls:/u, "https:");
+              if (new URL(value).protocol !== mode.scheme) continue;
+              const url = value.replace(/^(?:tls|tcp|tlstcp):/u, "https:");
               if (config.publicOrigin !== undefined ? publicOrigin(url) === publicOrigin(config.publicOrigin) : new URL(url).hostname.endsWith(".pinggy.link")) { resolve(publicOrigin(url)); return; }
             }
           };

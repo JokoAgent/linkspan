@@ -1,6 +1,6 @@
 {
   "name": "@jokoagent/linkspan-pinggy", "version": "0.1.0", "type": "module",
-  "description": "Explicit Pinggy HTTP/TLS carriers with target-pinned SDK preparation",
+  "description": "Explicit Pinggy HTTP/TLS/TCP/TLSTCP and UDP carriers with target-pinned SDK preparation",
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
   "files": ["dist", "README.md"],
   "scripts": { "build": "tsc -p tsconfig.json", "test": "node --test test/*.test.mjs" },

@@ -64,3 +64,11 @@ test('zrok recovery cannot retire a persistent share without its exact original 
   await assert.rejects(reconcileConnectorResource(config,{...resource,providerResourceId:'share',providerResourceOwner:'other-owner'},{requestId:'original'}),{code:'invalid_argument'});
   await assert.rejects(reconcileConnectorResource(config,{...resource,createdByHost:false},{requestId:'original'}),{code:'invalid_argument'});
 });
+test('new UDP providers reject unsafe or inconsistent endpoint configuration before effects',async()=>{
+  const options={requestId:'original',localTarget:{address:'127.0.0.1',port:4444,ownerId:'capture-original'}};
+  const frp={provider:'frp',budget,publicHost:'public.example',publicPort:4444,serverAddress:'relay.example',serverPort:7000,token:'publisher',serverName:'relay.example',remotePort:5555};
+  await assert.rejects(startDatagramMapping(frp,options),{code:'invalid_argument'});
+  await assert.rejects(startDatagramMapping({provider:'pinggy',runtime:'ssh',sdkDirectory:process.cwd(),budget},options),{code:'invalid_argument'});
+  await assert.rejects(startDatagramMapping({provider:'pinggy',runtime:'sdk',sdkDirectory:process.cwd(),publicHost:'public.example',budget},options),{code:'invalid_argument'});
+  await assert.rejects(startDatagramMapping({provider:'rathole',budget,publicHost:'public.example',publicPort:4444,remoteAddress:'relay.example:7000',serviceName:'../../other',token:'publisher'},options),{code:'invalid_argument'});
+});

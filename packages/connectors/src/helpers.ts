@@ -33,7 +33,7 @@ async function invocation(config: ConnectorConfig, options: ConnectorOptions, br
   switch (config.provider) {
     case "frp": {
       address(config.serverAddress); port(config.serverPort); boundedText(config.token, "relay publisher token"); address(config.serverName);
-      if (!["tcp", "https"].includes(config.mode)) invalid("Only public frp TCP and HTTPS proxies are supported.");
+      if (!["tcp", "http", "https"].includes(config.mode)) invalid("Only public frp TCP, HTTP and HTTPS proxies are supported.");
       const origin = publicOrigin(config.publicOrigin);
       const ca = await readCertificateBundle(config.serverCaPool); const caFile = join(directory, "relay-ca.pem");
       await writeFile(caFile, ca, { flag: "wx", mode: 0o600 });
@@ -218,7 +218,7 @@ async function spawnCarrier(config: ConnectorConfig & { readonly helper: Connect
 
 export async function startHelperConnector(config: ConnectorConfig, options: ConnectorOptions): Promise<Connector> {
   if (!("helper" in config)) invalid("This carrier requires an explicitly prepared helper.");
-  const http = (config.provider === "funnel" && config.mode !== "tcp") || config.provider === "zrok" || (config.provider === "pangolin" && config.mode === "http") || (config.provider === "netbird" && config.mode === "http");
+  const http = (config.provider === "funnel" && config.mode !== "tcp") || config.provider === "zrok" || (config.provider === "frp" && config.mode === "http") || (config.provider === "pangolin" && config.mode === "http") || (config.provider === "netbird" && config.mode === "http");
   return startWithLifecycle(config, options, http ? "http" : "tls", (bridge, signal) => spawnCarrier(config, { ...options, signal }, bridge));
 }
 

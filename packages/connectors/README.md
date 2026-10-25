@@ -36,12 +36,16 @@ availability, regional quotas, throughput, device behavior, or account access.
 | --- | --- | --- | --- |
 | Cloudflare Quick | `../cloudflare/src/index.ts`, `startQuickTunnel` | Restricted-helper source/build checks; origin/cancellation tests in that package | Free endpoint allocation, anti-abuse and Internet/stream behavior |
 | Cloudflare named | `../cloudflare/src/named.ts` and `startNamedTunnel` | API uncertainty/ownership tests; restricted local ingress | Publisher account/API token, owned DNS name/CNAME, real tunnel provisioning |
-| Funnel HTTP | `src/helpers.ts`, `helpers/funnel/main.go`, tsnet v1.104.2 | Actual helper build; fixed-target byte forwarding and serve-state Go tests | Tailnet key, MagicDNS/HTTPS/Funnel policy, allowed ts.net name and port |
+| Funnel HTTP / TLS-terminated TCP | `src/helpers.ts`, `helpers/funnel/main.go`, tsnet v1.104.2 | Actual helper build; TLS-terminated raw listener forwards fixed byte target; serve-state Go tests | Tailnet key, MagicDNS/HTTPS/Funnel policy, allowed ts.net name and port |
 | Funnel raw TCP carrying host TLS | Same entry with `mode: "tcp"` | Actual helper build; raw ServeConfig and nonpersistent serve-state tests | Same tailnet conditions; no UDP support is implied |
 | frp public TCP | `src/helpers.ts`, frpc v0.71.1 | Actual client/server TLS transport and host TLS relay test | Existing frps operator, public TCP port and certificate |
+| frp public HTTP vhost | Same, `mode: "http"` | Actual vhost relay to the fixed CA/SNI-verified host HTTPS bridge | Existing public HTTPS frontend terminating outer TLS before frps HTTP vhost; application Noise is still required |
 | frp public HTTPS | Same, `mode: "https"` | Actual SNI HTTPS-vhost client/server relay test | Existing frps HTTPS vhost/domain, certificate |
+| frp public UDP mapping | `src/datagram.ts`, same fixed frpc | Actual authenticated client/server UDP relay, binary packet bounds and owned cleanup | Existing frps UDP port; matching client/server `udpPacketSize`; same-host authorized native media target |
 | rathole TCP over Noise | Same, rathole v0.5.0 | Actual local relay, fixed Noise key, host TLS test | Existing server/service/token and reachable public listener |
 | rathole TCP over TLS | Same, explicit CA/relay hostname | Actual verified connector TLS and host TLS test | Existing server certificate/PKCS12 identity and public listener |
+| rathole UDP over Noise | `src/datagram.ts`, same fixed rathole | Actual service `type: "udp"`, fixed relay Noise key, binary packets and cancellation/cleanup | Existing UDP service/token/public port and same-host authorized native media target |
+| rathole UDP over TLS | Same, explicit CA/relay hostname | Actual verified TLS relay, binary packets and cancellation/cleanup | Existing relay PKCS12 identity, matching CA/SNI and owned native media target |
 | bore TCP carrying host TLS | Same, bore v0.6.0 | Actual local bore relay with host TLS, secret configuration | Existing server or bore.pub fixed available port, certificate for public host; no SLA |
 | SSH reverse TCP carrying host TLS | `../ssh/src/index.ts`, ssh2 1.17.0 | Actual ssh2 server, pinned host key, reverse bind, host TLS, cleanup | SSH account/key, trusted SSH fingerprint and GatewayPorts/public bind policy |
 | NetBird public HTTP | `src/netbird.ts`, `helpers/netbird/main.go`, embed v0.81.4 | Resource ownership/error tests, fixed peer target, helper build, unsafe persisted capability rejection | Publisher management token/setup key, dedicated peer and proxy-enabled cluster |
@@ -58,14 +62,38 @@ availability, regional quotas, throughput, device behavior, or account access.
 | Pangolin UDP packet mapping | `src/datagram.ts`, selected Newt UDP proxy | Actual restricted helper build; exclusive UDP filter, global peer/message limits; local UDP tests | Existing raw UDP resource, owned remote node and same-host native media target |
 | Pinggy HTTPS, SDK runtime | `../pinggy/src/index.ts`, SDK 0.5.3/native 0.3.1 | Selected archive/JS/native hashes; actual Windows Node ABI 137 load | Actual free/paid tunnel, temporary hostname and interstitial/stream behavior |
 | Pinggy TLS passthrough, SDK runtime | Same, mode `tls` | Exact reported origin and prepared ABI checks | Matching host certificate and actual service TLS-mode access |
+| Pinggy raw TCP, SDK runtime | Same, mode `tcp` | Fixed raw TLS bridge; exact assigned `tcp://` endpoint and selected SDK fixtures | Matching host certificate, actual free/random or reserved TCP port |
+| Pinggy TLSTCP, SDK runtime | Same, mode `tlstcp`, `tlstcpEndpoint: "tcp"` or `"tls"` | Paid-consent guard and separate exact-scheme endpoint/bridge checks | Existing Pro account; TCP arm passes host TLS, TLS arm terminates outer TLS at Pinggy and retains application Noise |
 | Pinggy HTTPS, explicit SSH runtime | `../pinggy/src/ssh.ts`, ssh2 1.17.0 | Explicit selection/host-pin guard; shared fixed-origin tests | Independently verified Pinggy host fingerprint and actual service connection |
 | Pinggy TLS passthrough, explicit SSH runtime | Same, mode `tls` | Host-pin and exact endpoint validation | Same SSH trust plus matching host certificate; Electron may select this runtime explicitly |
+| Pinggy TCP / both TLSTCP endpoints, explicit SSH runtime | Same, modes `tcp` / `tlstcp` and explicit `tlstcpEndpoint` | Shared endpoint/bridge selection, trusted SSH pin and no automatic runtime fallback | Actual service access; TLSTCP requires an explicitly enabled existing Pro plan |
+| Pinggy public UDP mapping, SDK runtime | `src/datagram.ts`, `../pinggy/src/datagram.ts` | Selected SDK forwarding/endpoint fixtures, real bounded UDP bridge, original journal/cancellation/late-owner tests | Prepared ABI-compatible SDK and actual free temporary or reserved UDP allocation; SSH UDP is unavailable |
 | Dev Tunnels anonymous HTTP/WSS | `../dev-tunnels/src/index.ts`, SDKs 1.3.61 | Real typed SDK REST adapter tests: stable ID, anonymous AC, GET-only material recovery and exact cleanup | Publisher account, cluster, service anti-phishing/body/stream limits and real relay connection |
 | localtunnel HTTP/WSS | `../localtunnel/src/index.ts`, SDK 2.0.2 | Config rejection and shared origin/lifecycle tests | Public instance availability, anti-abuse page, assigned hostname and actual long streams |
 
 `CONNECTOR_LIMITS` exposes Beta/experimental/free/session/body-limit notes to
 host settings and console UIs. Free and experimental entries are implemented
 paths with explicit conditions; they are not evidence of unrestricted service.
+
+The mode boundary follows actual client requirements. Full private-network/TUN
+membership, Cloudflare Access/WARP, supplier visitor SSO/OAuth/PIN/password/header
+authentication, frp STCP/SUDP/XTCP visitors and zrok private TCP/UDP shares are
+excluded: those private paths require a separately installed network/access
+client. Zrok public/reserved HTTP forwarding remains included. Pinggy UDP uses
+the SDK because SSH has no UDP forwarding; selecting SSH never silently installs
+or switches to the native SDK. Bore and reverse SSH expose TCP only. The Funnel
+HTTP path already uses a TLS-terminated `net.Listener` and byte forwarding, so
+the upstream TLS-terminated-TCP carrier has the same selected path. Static file
+servers, raw terminal/database services and arbitrary local targets are host
+applications, not extra Linkspan modes.
+
+Official mode evidence: [frp TCP/UDP](https://gofrp.org/en/docs/features/tcp-udp/),
+[frp vhosts](https://gofrp.org/en/docs/features/http-https/),
+[rathole v0.5.0 service type](https://github.com/rathole-org/rathole/tree/v0.5.0),
+[Pinggy tunnel types](https://pinggy.io/docs/usages/),
+[Pinggy SDK and Pro TLSTCP](https://pinggy-io.github.io/sdk-nodejs/),
+[Funnel options](https://tailscale.com/docs/reference/tailscale-cli/funnel),
+and [zrok share modes](https://netfoundry.io/docs/zrok/category/guides/).
 
 ## Explicit helper preparation
 
@@ -143,10 +171,21 @@ Packet limits default to 2048 bytes, 32 peers and 30 seconds idle, with hard max
 65507 bytes, 64 peers and 120 seconds. Queues and both-direction traffic are
 bounded; excess packets are dropped without concatenation or retry.
 
+frp defaults to 1500 bytes instead, matching its upstream `udpPacketSize`. An
+explicit `maximumDatagramBytes` is written to the fixed frpc configuration; the
+frps operator must use the same value. rathole maps an existing UDP service over
+verified Noise or TLS and never publishes a plaintext connector-to-relay leg.
+Pinggy accepts `runtime: "sdk"` and the prepared `sdkDirectory`. Omit both
+`publicHost` and `publicPort` for a free temporary allocation; the returned mapping
+uses the actual assigned UDP endpoint. If either field is specified, both must
+be supplied and must match the assigned endpoint. A configured mismatch retires
+the original tunnel instead of adopting a replacement. Free Pinggy sessions are
+capped locally at 60 minutes; no subscription or persistent reservation is bought.
+
 ## Checks
 
 `pnpm test` runs account-free runtime, UDP, resource and lifecycle tests.
-`LINKSPAN_HELPER_RELEASE_TESTS=1` additionally runs all five actual local relay
+`LINKSPAN_HELPER_RELEASE_TESTS=1` additionally runs all nine actual local relay
 cases in `test/helper-relays.test.mjs`; those are explicitly skipped otherwise.
 Go tests for common/Funnel/NetBird verify fixed targets, packet behavior and safe
 embedded state. Pangolin and zrok preparation also runs their restricted-source
