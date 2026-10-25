@@ -11,9 +11,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-latest, macos-15]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-latest, windows-11-arm, macos-15, macos-15-intel]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -28,14 +28,58 @@ jobs:
           go-version: 1.27.3
           cache: false
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
+      - run: pnpm build
+      - name: Install the fixed browser binding compiler
+        shell: bash
+        run: rustup toolchain install 1.99.0 --profile minimal --target wasm32-unknown-unknown && rustup default 1.99.0
+      - name: Build independently selected browser runtimes from fixed inputs
+        run: pnpm build:browser-runtimes
+      - name: Build selected SDK runtimes for this runner
+        shell: bash
+        run: |
+          node --input-type=module -e "import {resolve} from 'node:path'; import {prepareIrohRuntime} from './packages/iroh-node/scripts/prepare.mjs'; await prepareIrohRuntime({directory:resolve('.runtime/sdk/iroh')});"
+          node --input-type=module -e "import {resolve} from 'node:path'; import {prepareTailcatRuntime} from './packages/tailcat-node/scripts/prepare.mjs'; await prepareTailcatRuntime({directory:resolve('.runtime/sdk/tailcat')});"
+      - uses: actions/setup-java@v4
+        if: matrix.os == 'ubuntu-24.04'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Verify the actual Kotlin native UDP engine
+        if: matrix.os == 'ubuntu-24.04'
+        run: pnpm --filter @jokoagent/linkspan-iroh-node test:native-kotlin
+      - name: Build the selected iOS SDK and typecheck the real Swift bridge
+        if: matrix.os == 'macos-15'
+        shell: bash
+        run: |
+          rustup target add aarch64-apple-ios --toolchain 1.99.0
+          node --input-type=module -e "import {resolve} from 'node:path'; import {prepareIrohMobileRuntime} from './packages/iroh-node/scripts/prepare-mobile.mjs'; await prepareIrohMobileRuntime({directory:resolve('.runtime/iroh-ios'),platform:'ios',targets:['ios-arm64']});"
+          xcrun --sdk iphoneos swiftc -typecheck -swift-version 5 -target arm64-apple-ios16.4 -sdk "$(xcrun --sdk iphoneos --show-sdk-path)" -I .runtime/iroh-ios/ios/Iroh.xcframework/ios-arm64/Headers .runtime/iroh-ios/ios/IrohLib.swift packages/iroh/native/ios/LinkspanIrohEngine.swift
+      - name: Verify all selected library behavior with real prepared bindings
+        env:
+          LINKSPAN_IROH_RUNTIME_DIR: ${{ github.workspace }}/.runtime/sdk/iroh
+          LINKSPAN_TAILCAT_RUNTIME_DIR: ${{ github.workspace }}/.runtime/sdk/tailcat
+        run: pnpm check
+      - name: Build bounded embedded public connectors for this runner
+        shell: bash
+        run: |
+          go -C packages/connectors/helpers/common test -mod=readonly ./...
+          go -C packages/connectors/helpers/funnel test -mod=readonly ./...
+          go -C packages/connectors/helpers/netbird test -mod=readonly ./...
+          node packages/connectors/scripts/build-embedded-helper.mjs funnel "${GITHUB_WORKSPACE}/.runtime/embedded-helpers"
+          node packages/connectors/scripts/build-embedded-helper.mjs netbird "${GITHUB_WORKSPACE}/.runtime/embedded-helpers"
+          node packages/connectors/scripts/build-embedded-helper.mjs pangolin "${GITHUB_WORKSPACE}/.runtime/embedded-helpers"
+          node --input-type=module -e "import {resolve} from 'node:path'; import {prepareConnectorHelper} from './packages/connectors/dist/index.js'; await prepareConnectorHelper({provider:'zrok',directory:resolve('.runtime/embedded-helpers')});"
+      - name: Verify actual fixed frp, rathole and bore byte carriers
+        env:
+          LINKSPAN_HELPER_RELEASE_TESTS: '1'
+        run: node --test packages/connectors/test/helper-relays.test.mjs
       - name: Build and verify the restricted helper for this runner
         run: node --input-type=module -e "import {resolve} from 'node:path'; import {prepareCloudflared} from './packages/cloudflare/dist/index.js'; await prepareCloudflared({directory:resolve('.runtime/helpers')});"
-      - name: Verify fixed consumer tarballs and required notices
+      - name: Verify consumer packages and required notices
         run: pnpm pack:artifacts
       - uses: actions/upload-artifact@v4
         with:
-          name: linkspan-packages-${{ runner.os }}-${{ github.sha }}
+          name: linkspan-packages-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
           path: .runtime/packages/${{ github.sha }}
       - name: Install the pinned browser used by the independent library check
         if: runner.os == 'Linux'
@@ -45,3 +89,11 @@ jobs:
         env:
           LINKSPAN_BROWSER_DRIVER: ${{ github.workspace }}/node_modules/playwright-core/index.mjs
         run: node packages/noise/test/browser-check.mjs
+      - name: Verify actual browser DTLS data channels and on-demand requests
+        if: runner.os == 'Linux'
+        env:
+          LINKSPAN_BROWSER_DRIVER: ${{ github.workspace }}/node_modules/playwright-core/index.mjs
+        run: node packages/webrtc/test/browser-check.mjs
+      - name: Verify actual browser SDK bindings and unselected backend requests
+        if: runner.os == 'Linux'
+        run: node packages/iroh/test/browser-runtime-check.mjs

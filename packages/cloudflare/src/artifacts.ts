@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 export const CLOUDFLARED_VERSION = "2026.10.3-linkspan.1";
 export const CLOUDFLARED_COMMIT = "de6376c5af4a67cbc65258682e5a01781827643d";
-export type CloudflaredTarget = "win32-x64" | "linux-x64" | "linux-arm64" | "darwin-x64" | "darwin-arm64";
+export type CloudflaredTarget = "win32-x64" | "win32-arm64" | "linux-x64" | "linux-arm64" | "darwin-x64" | "darwin-arm64";
 
 export class CloudflareConnectorError extends Error {
   constructor(readonly code: "invalid_input" | "unsupported_platform" | "integrity" | "cancelled" | "deadline" | "unavailable" | "closed" | "cleanup_failed", message: string) {
@@ -27,6 +27,7 @@ export interface CloudflaredArtifact {
 
 const ARTIFACTS: Record<CloudflaredTarget, Pick<CloudflaredArtifact, "binaryBytes" | "binarySha256">> = {
   "win32-x64": { binaryBytes: 40115200, binarySha256: "9d23f8b8bee69f4db958a59e44480a9d49242e1e50264ecb1de49428639ee360" },
+  "win32-arm64": { binaryBytes: 37160448, binarySha256: "af1d88e85c34d702f5c5e0673f8554d6586e48ca7acc9506903880c6b0cc0a51" },
   "linux-x64": { binaryBytes: 40104141, binarySha256: "7e0373c8786337d2babc809cf0e5ce8ab365c12782dfab89299271a34f83c694" },
   "linux-arm64": { binaryBytes: 37499101, binarySha256: "6b5693dcbf0d712cff5657eb97fe68e484bbcfe4bfa2efff336ac49777472f55" },
   "darwin-x64": { binaryBytes: 41248368, binarySha256: "14e9b5dd552cbe488207010232298b78e3bcbd846740cc5ac002c1df5f2a2efb" },

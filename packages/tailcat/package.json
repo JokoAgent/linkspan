@@ -1,0 +1,18 @@
+{
+  "name": "@jokoagent/linkspan-tailcat",
+  "version": "0.1.0",
+  "type": "module",
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./dist/browser.d.ts", "react-native": "./dist/bridge.js", "browser": "./dist/browser.js", "import": "./dist/node.js" },
+    "./browser": { "types": "./dist/browser.d.ts", "default": "./dist/browser.js" },
+    "./bridge": { "types": "./dist/bridge.d.ts", "default": "./dist/bridge.js" },
+    "./node": { "types": "./dist/node.d.ts", "default": "./dist/node.js" },
+    "./runtime": { "types": "./dist/runtime.d.ts", "default": "./dist/runtime.js" }
+  },
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "node --test test/*.test.mjs" },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*", "@jokoagent/linkspan-noise": "workspace:*", "@jokoagent/linkspan-tailcat-runtime": "workspace:*" },
+  "peerDependencies": { "@jokoagent/linkspan-tailcat-node": "workspace:*", "@jokoagent/linkspan-tailcat-wasm": "workspace:*" },
+  "peerDependenciesMeta": { "@jokoagent/linkspan-tailcat-node": { "optional": true }, "@jokoagent/linkspan-tailcat-wasm": { "optional": true } }
+}

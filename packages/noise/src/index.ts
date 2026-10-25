@@ -5,6 +5,8 @@ import type { NoiseComponents } from "@libp2p/noise";
 import { NoiseChannel, MAX_MESSAGE_BYTES as MESSAGE_LIMIT, RECEIVE_WINDOW_BYTES as WINDOW_LIMIT } from "./channel.js";
 import { createIdentity as generateIdentity, formatPublicKey, identityFromPrivateKey as restoreIdentity, importIdentity, parsePublicKey } from "./identity.js";
 import { SocketStream, silentLogger } from "./socket.js";
+import { StreamSocket } from "./stream.js";
+import type { StreamCarrier, ConnectStreamOptions } from "./types.js";
 import type { AcceptWebSocketOptions, ConnectWebSocketOptions, Identity, VerifiedChannel, WebSocketLike } from "./types.js";
 
 export async function createIdentity(): Promise<Identity> {
@@ -14,7 +16,7 @@ export async function createIdentity(): Promise<Identity> {
 export async function identityFromPrivateKey(privateKey: Uint8Array): Promise<Identity> { return restoreIdentity(privateKey); }
 export const MAX_MESSAGE_BYTES = MESSAGE_LIMIT;
 export const RECEIVE_WINDOW_BYTES = WINDOW_LIMIT;
-export type { Identity, VerifiedChannel, WebSocketLike, ConnectWebSocketOptions, AcceptWebSocketOptions } from "./types.js";
+export type { Identity, VerifiedChannel, WebSocketLike, ConnectWebSocketOptions, AcceptWebSocketOptions, StreamCarrier, ConnectStreamOptions } from "./types.js";
 
 const PROLOGUE = new TextEncoder().encode("linkspan/noise-websocket/1");
 const HANDSHAKE_TIMEOUT_MS = 10_000;
@@ -108,4 +110,23 @@ export async function connectWebSocket(options: ConnectWebSocketOptions): Promis
 
 export async function acceptWebSocket(socket: WebSocketLike, options: AcceptWebSocketOptions): Promise<VerifiedChannel> {
   return secure(socket, options, false);
+}
+
+/** Authenticate an explicitly selected SDK stream using the same host-owned endpoint pin. */
+export async function connectStream(carrier: StreamCarrier, options: ConnectStreamOptions): Promise<VerifiedChannel> {
+  const scope = createOperationScope(options);
+  try {
+    parsePublicKey(options.expectedPublicKey);
+    scope.check();
+    const identity = options.identity ?? await scope.wait(createIdentity());
+    scope.check();
+    return await secure(new StreamSocket(carrier), { ...options, identity }, true, options.expectedPublicKey);
+  } catch (error) {
+    carrier.abort(error);
+    throw asLinkspanError(error);
+  } finally { scope.dispose(); }
+}
+
+export async function acceptStream(carrier: StreamCarrier, options: AcceptWebSocketOptions): Promise<VerifiedChannel> {
+  return secure(new StreamSocket(carrier), options, false);
 }

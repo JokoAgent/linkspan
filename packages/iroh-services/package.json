@@ -1,0 +1,8 @@
+{
+  "name": "@jokoagent/linkspan-iroh-services", "version": "0.1.0", "type": "module",
+  "files": ["dist", "rust", "scripts", "README.md"],
+  "exports": { ".": { "types": "./dist/index.d.ts", "node": "./dist/index.js" }, "./prepare": "./scripts/prepare.mjs" },
+  "scripts": { "build": "tsc -p tsconfig.json", "build:wasm": "node scripts/prepare.mjs", "test": "node --test test/*.test.mjs" },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*" },
+  "devDependencies": { "@jokoagent/linkspan-iroh-wasm": "workspace:*" }
+}

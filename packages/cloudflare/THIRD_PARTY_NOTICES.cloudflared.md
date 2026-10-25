@@ -1,6 +1,6 @@
 # Third-party notices in cloudflared 2026.10.3-linkspan.1
 
-Generated from the five pinned restricted helper binaries; module versions and Go h1 checksums are taken from their embedded build information. All collected module archives passed the embedded Go content checksums, including replacement modules. This collection preserves license/notice files found in these exact modules and the Go standard library license; it does not assign a new license to Linkspan.
+Generated from the six pinned restricted helper binaries; module versions and Go h1 checksums are taken from their embedded build information. All collected module archives passed the embedded Go content checksums, including replacement modules. The Windows arm64 module graph is fully covered by the existing collected module archives. This collection preserves license/notice files found in these exact modules and the Go standard library license; it does not assign a new license to Linkspan.
 
 These are modified builds of source de6376c5af4a67cbc65258682e5a01781827643d, with the accompanying cloudflared-restricted.patch applied and fixed Go 1.27.3 build inputs. They are not the official Cloudflare release executables.
 

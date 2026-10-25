@@ -1,0 +1,230 @@
+export interface HelperArtifact { provider: string; target: string; version: string; url: string; archiveBytes: number; archiveSha256: string; binaryBytes: number; binarySha256: string; entry: string; format: string }
+/** Fixed official release artifacts, verified 2026-10-26. No latest lookup at runtime. */
+export const HELPER_ARTIFACTS: readonly HelperArtifact[] = [
+  {
+    provider: "frp", target: "win32-arm64", version: "0.71.1",
+    url: "https://github.com/fatedier/frp/releases/download/v0.71.1/frp_0.71.1_windows_arm64.zip",
+    archiveBytes: 12387794, archiveSha256: "6c25afb4058f7708937db7064836fec593e941de0e6c2c255982335a9b16d370",
+    binaryBytes: 14837760, binarySha256: "f7d9a29869252a1a4525862a3d62d26c3fcf7b2e014343e2ae75f174f4061351",
+    entry: "frp_0.71.1_windows_arm64/frpc.exe", format: "zip"
+  },
+  {
+    "target": "win32-x64",
+    "archiveSha256": "b90074b2b6a1d792a7a40f085ac6d276bcab2d1bc60201f8a86ca53ce65ce821",
+    "provider": "frp",
+    "url": "https://github.com/fatedier/frp/releases/download/v0.71.1/frp_0.71.1_windows_amd64.zip",
+    "archiveBytes": 14152383,
+    "binaryBytes": 17043968,
+    "binarySha256": "23d11640bee87207c7a99d006b84c554df997feeba7ac7243db20a88a9cb5e01",
+    "entry": "frp_0.71.1_windows_amd64/frpc.exe",
+    "version": "0.71.1",
+    "format": "zip"
+  },
+  {
+    "target": "linux-x64",
+    "archiveSha256": "1d9875210972a5d1a62b2dc4c48df45ab0af05d3ca1b5e494a014428259df803",
+    "provider": "frp",
+    "url": "https://github.com/fatedier/frp/releases/download/v0.71.1/frp_0.71.1_linux_amd64.tar.gz",
+    "archiveBytes": 14140587,
+    "binaryBytes": 16912546,
+    "binarySha256": "35c6054d4549bbcf2f02875543895fd9e44c2aae2925f61cd8ff5a693703c28b",
+    "entry": "frp_0.71.1_linux_amd64/frpc",
+    "version": "0.71.1",
+    "format": "tar.gz"
+  },
+  {
+    "target": "linux-arm64",
+    "archiveSha256": "8edf590b0c396fa42f9c147121a76af83cfc2002b08f5aef0ea1008c43482019",
+    "provider": "frp",
+    "url": "https://github.com/fatedier/frp/releases/download/v0.71.1/frp_0.71.1_linux_arm64.tar.gz",
+    "archiveBytes": 12539075,
+    "binaryBytes": 15007906,
+    "binarySha256": "651de3428bdc7f37b4bad76ed3236b221939a989c433cd7daee79d2817519f8b",
+    "entry": "frp_0.71.1_linux_arm64/frpc",
+    "version": "0.71.1",
+    "format": "tar.gz"
+  },
+  {
+    "target": "darwin-x64",
+    "archiveSha256": "8acb59b6fb998cc8d209d1373d90bf70fa5ec3efeb4dfbc7bda6ce3abd78cb45",
+    "provider": "frp",
+    "url": "https://github.com/fatedier/frp/releases/download/v0.71.1/frp_0.71.1_darwin_amd64.tar.gz",
+    "archiveBytes": 14185816,
+    "binaryBytes": 17032688,
+    "binarySha256": "01cb3d59aba860a7097e1343ce04f9b5d8164b7488e21f5c551a34e62406c4c6",
+    "entry": "frp_0.71.1_darwin_amd64/frpc",
+    "version": "0.71.1",
+    "format": "tar.gz"
+  },
+  {
+    "target": "darwin-arm64",
+    "archiveSha256": "d15d0324b99e14619c9aa46e37f6db588c06a09be4bc6f7948890b6b61077842",
+    "provider": "frp",
+    "url": "https://github.com/fatedier/frp/releases/download/v0.71.1/frp_0.71.1_darwin_arm64.tar.gz",
+    "archiveBytes": 12867210,
+    "binaryBytes": 15152338,
+    "binarySha256": "7aaaba058dbeeedc86be876c44912c4f33756ab3e6e7a085f8d7af7814a073c1",
+    "entry": "frp_0.71.1_darwin_arm64/frpc",
+    "version": "0.71.1",
+    "format": "tar.gz"
+  },
+  {
+    "target": "win32-x64",
+    "archiveSha256": "2f3b4900a63d32a14e1578b2de68f78daad89b7c47b9388c26d922962faef430",
+    "provider": "rathole",
+    "url": "https://github.com/rathole-org/rathole/releases/download/v0.5.0/rathole-x86_64-pc-windows-msvc.zip",
+    "archiveBytes": 1644348,
+    "binaryBytes": 4051456,
+    "binarySha256": "a91717eb37b3dc25c9d2391aca6a1b1f8edde9a3de626264718811ff8113e55b",
+    "entry": "rathole.exe",
+    "version": "0.5.0",
+    "format": "zip"
+  },
+  {
+    "target": "linux-x64",
+    "archiveSha256": "3e7d0d0f365120cd3cd351d147d1a12ee960c8068b464d4dd533a3821873b80e",
+    "provider": "rathole",
+    "url": "https://github.com/rathole-org/rathole/releases/download/v0.5.0/rathole-x86_64-unknown-linux-gnu.zip",
+    "archiveBytes": 1275184,
+    "binaryBytes": 1276052,
+    "binarySha256": "d2202f2aa3a432135bddbe1c6104600c6577cd4507a70e77c08741c7ad879926",
+    "entry": "rathole",
+    "version": "0.5.0",
+    "format": "zip"
+  },
+  // Upstream v0.5.0 cross builds use `embedded --no-default-features`,
+  // which omits TLS. linux-arm64 therefore uses our fixed full-feature source
+  // build through prepareConnectorHelper, just like missing release targets.
+  {
+    "target": "darwin-x64",
+    "archiveSha256": "768789bf3298d6ebcd03995ad1a0af4de83af5d894030c67e70edc229f61bd75",
+    "provider": "rathole",
+    "url": "https://github.com/rathole-org/rathole/releases/download/v0.5.0/rathole-x86_64-apple-darwin.zip",
+    "archiveBytes": 1724482,
+    "binaryBytes": 4093040,
+    "binarySha256": "c24775737af27e0d9c49ce707a5868c6eaa4afa8e00442bec2fcfb2fab3a054c",
+    "entry": "rathole",
+    "version": "0.5.0",
+    "format": "zip"
+  },
+  {
+    "target": "win32-x64",
+    "archiveSha256": "01709c64fe2787cdc9a21d7030b0f08ad72dff0c36b7ecb72f4f667a55a34b4f",
+    "provider": "bore",
+    "url": "https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-pc-windows-msvc.zip",
+    "archiveBytes": 673531,
+    "binaryBytes": 1782784,
+    "binarySha256": "e8c1096ea01460ba9dbf30017b5eccf2100f63ef2c701930e56fcaca239b48cc",
+    "entry": "bore.exe",
+    "version": "0.6.0",
+    "format": "zip"
+  },
+  {
+    "target": "linux-x64",
+    "archiveSha256": "e484d1e3acba77169b773f31a5bfb34192d4b660f44a094a658a2522cd2270f7",
+    "provider": "bore",
+    "url": "https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-unknown-linux-musl.tar.gz",
+    "archiveBytes": 1097869,
+    "binaryBytes": 2825552,
+    "binarySha256": "60548b7a145ba334981b19fda7cd0210d24a108a3d0dc113919b33fd2eaa90ab",
+    "entry": "bore",
+    "version": "0.6.0",
+    "format": "tar.gz"
+  },
+  {
+    "target": "linux-arm64",
+    "archiveSha256": "ffc4515f3617420b243758cf36ed6a63208d7dba76b2ec3e90d1f476a9742951",
+    "provider": "bore",
+    "url": "https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-aarch64-unknown-linux-musl.tar.gz",
+    "archiveBytes": 1073405,
+    "binaryBytes": 2761880,
+    "binarySha256": "348068ca74769635b91e9243d6a2befda516b74a7c692f14263513e9c675706a",
+    "entry": "bore",
+    "version": "0.6.0",
+    "format": "tar.gz"
+  },
+  {
+    "target": "darwin-x64",
+    "archiveSha256": "206db723a382bbc18d2893fc8472868e0b5f41de35975269aab7891ecc8659cc",
+    "provider": "bore",
+    "url": "https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-x86_64-apple-darwin.tar.gz",
+    "archiveBytes": 972698,
+    "binaryBytes": 2415488,
+    "binarySha256": "204f89169dbb89a6da0cb21a1ba5da645d14d22508888cfc46ad27353fd6c674",
+    "entry": "bore",
+    "version": "0.6.0",
+    "format": "tar.gz"
+  },
+  {
+    "target": "darwin-arm64",
+    "archiveSha256": "65f43a67b90874700538bdb6064c5e92276e64dfba24f5cd72ef24a035eec3bc",
+    "provider": "bore",
+    "url": "https://github.com/ekzhang/bore/releases/download/v0.6.0/bore-v0.6.0-aarch64-apple-darwin.tar.gz",
+    "archiveBytes": 950721,
+    "binaryBytes": 2389664,
+    "binarySha256": "aab3e0f13c6cf35a4203d74cf9a229b935ea4d39a98b25ee8222a3311b4d52f1",
+    "entry": "bore",
+    "version": "0.6.0",
+    "format": "tar.gz"
+  },
+  {
+    "target": "win32-x64",
+    "archiveSha256": "661a12c56c9610c71fc859fdf161873a5833c762b45c37ff5241e682b5017917",
+    "provider": "zrok",
+    "url": "https://github.com/openziti/zrok/releases/download/v2.0.8/zrok_2.0.8_windows_amd64.tar.gz",
+    "archiveBytes": 33256895,
+    "binaryBytes": 98095616,
+    "binarySha256": "771d63d500f64c2a0858ef44439d2dbe75db51d1d288bf77a69cdc56e535be3a",
+    "entry": "zrok2.exe",
+    "version": "2.0.8",
+    "format": "tar.gz"
+  },
+  {
+    "target": "linux-x64",
+    "archiveSha256": "027cc46c8b652a82f87823cec45fbb5fc878455268857e69e22fbe9dca225f3a",
+    "provider": "zrok",
+    "url": "https://github.com/openziti/zrok/releases/download/v2.0.8/zrok_2.0.8_linux_amd64.tar.gz",
+    "archiveBytes": 32663884,
+    "binaryBytes": 96286440,
+    "binarySha256": "c3d48d0694ad049b1d46de23fd31c322cb318632c8ba31788c2610e45ee92fef",
+    "entry": "zrok2",
+    "version": "2.0.8",
+    "format": "tar.gz"
+  },
+  {
+    "target": "linux-arm64",
+    "archiveSha256": "c06f32935a88b918f03daf8a5f9f1da8c8e278bba9300b53c2666968f0ec91fc",
+    "provider": "zrok",
+    "url": "https://github.com/openziti/zrok/releases/download/v2.0.8/zrok_2.0.8_linux_arm64.tar.gz",
+    "archiveBytes": 30294530,
+    "binaryBytes": 91035616,
+    "binarySha256": "05811ed06e16acfc348927c8482da96af7551f52d262d3adaa923ce257431436",
+    "entry": "zrok2",
+    "version": "2.0.8",
+    "format": "tar.gz"
+  },
+  {
+    "target": "darwin-x64",
+    "archiveSha256": "788c37f1f9c4b192e725979bcb5e8e15e93aed87c1de1d208142d50611999d1d",
+    "provider": "zrok",
+    "url": "https://github.com/openziti/zrok/releases/download/v2.0.8/zrok_2.0.8_darwin_amd64.tar.gz",
+    "archiveBytes": 33618416,
+    "binaryBytes": 97462976,
+    "binarySha256": "32c0aa1976c8e37ea9d55f1000c1f4655a7758f5d903d874cb68d8ef50d9fe4c",
+    "entry": "zrok2",
+    "version": "2.0.8",
+    "format": "tar.gz"
+  },
+  {
+    "target": "darwin-arm64",
+    "archiveSha256": "4bf2ec6cf7c42accdf96e575f7c163f0c4ab26ecb080b4ab481fc43ee1cdd98e",
+    "provider": "zrok",
+    "url": "https://github.com/openziti/zrok/releases/download/v2.0.8/zrok_2.0.8_darwin_arm64.tar.gz",
+    "archiveBytes": 31138575,
+    "binaryBytes": 92141088,
+    "binarySha256": "63ce90c6b3fb62b018ebb0479f29b0c3fadc9ae73988ab50388f3553d7014caf",
+    "entry": "zrok2",
+    "version": "2.0.8",
+    "format": "tar.gz"
+  }
+];

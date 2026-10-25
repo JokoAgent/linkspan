@@ -9,6 +9,7 @@
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
     "check": "pnpm build && pnpm test",
+    "build:browser-runtimes": "pnpm --filter @jokoagent/linkspan-tailcat-wasm build:wasm && pnpm --filter @jokoagent/linkspan-iroh-wasm build:wasm && pnpm --filter @jokoagent/linkspan-iroh-services build:wasm",
     "pack:artifacts": "node scripts/pack-artifacts.mjs"
   },
   "devDependencies": {

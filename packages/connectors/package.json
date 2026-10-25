@@ -1,0 +1,31 @@
+{
+  "name": "@jokoagent/linkspan-connectors",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Explicit, bounded public-carrier adapters for Linkspan",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./runtime": { "types": "./dist/runtime.d.ts", "import": "./dist/runtime.js" },
+    "./helpers": { "types": "./dist/helpers.d.ts", "import": "./dist/helpers.js" },
+    "./netbird": { "types": "./dist/netbird.d.ts", "import": "./dist/netbird.js" },
+    "./datagram": { "types": "./dist/datagram.d.ts", "import": "./dist/datagram.js" }
+  },
+  "files": ["dist", "README.md", "helpers", "scripts"],
+  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "node --test test/*.test.mjs" },
+  "engines": { "node": ">=24.16.0" },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*", "@jokoagent/linkspan-connector-runtime": "workspace:*", "tar": "7.5.22", "fflate": "0.8.2" },
+  "peerDependencies": {
+    "@jokoagent/linkspan-ngrok": "workspace:*",
+    "@jokoagent/linkspan-ssh": "workspace:*",
+    "@jokoagent/linkspan-pinggy": "workspace:*",
+    "@jokoagent/linkspan-dev-tunnels": "workspace:*",
+    "@jokoagent/linkspan-localtunnel": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@jokoagent/linkspan-ngrok": { "optional": true },
+    "@jokoagent/linkspan-ssh": { "optional": true },
+    "@jokoagent/linkspan-pinggy": { "optional": true },
+    "@jokoagent/linkspan-dev-tunnels": { "optional": true },
+    "@jokoagent/linkspan-localtunnel": { "optional": true }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "@jokoagent/linkspan-noise",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "description": "Pinned endpoint Noise channels over ordinary WebSocket carriers",
   "type": "module",
   "repository": { "type": "git", "url": "https://github.com/JokoAgent/linkspan.git", "directory": "packages/noise" },

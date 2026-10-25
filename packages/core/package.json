@@ -1,11 +1,14 @@
 {
   "name": "@jokoagent/linkspan-core",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "description": "Host-independent connection contracts and bounded operation lifetimes",
   "type": "module",
   "repository": { "type": "git", "url": "https://github.com/JokoAgent/linkspan.git", "directory": "packages/core" },
   "files": ["dist", "README.md"],
-  "exports": { ".": { "types": "./dist/index.d.ts", "react-native": "./dist/index.js", "import": "./dist/index.js" } },
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "react-native": "./dist/index.js", "import": "./dist/index.js" },
+    "./stream": { "types": "./dist/stream.d.ts", "default": "./dist/stream.js" }
+  },
   "sideEffects": false,
   "scripts": { "build": "tsc -p tsconfig.json", "test": "node --test test/*.test.mjs" }
 }

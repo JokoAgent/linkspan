@@ -1,0 +1,17 @@
+import type { ConnectorLimits, ConnectorProvider } from "./types.js";
+
+const limit = (stability: ConnectorLimits["stability"], free: boolean, temporaryHostname: boolean, notes: readonly string[], extra: Partial<ConnectorLimits> = {}): ConnectorLimits => Object.freeze({ stability, free, temporaryHostname, serviceLevelAgreement: false, notes: Object.freeze(notes), ...extra });
+export const CONNECTOR_LIMITS: Readonly<Record<ConnectorProvider, ConnectorLimits>> = Object.freeze({
+  funnel: limit("beta", true, false, ["Requires a publisher tailnet, MagicDNS, HTTPS and Funnel policy.", "Only ts.net names and ports 443, 8443 or 10000; provider bandwidth limits apply."]),
+  frp: limit("stable", false, false, ["Requires an existing frps operator or explicitly chosen self-hosted server.", "Only public TCP/HTTPS proxies; visitor modes are excluded."]),
+  rathole: limit("stable", false, false, ["Requires an existing relay operator; service token and Noise/TLS protect the connector leg."]),
+  bore: limit("experimental", true, false, ["bore.pub has no SLA; the host must own a certificate matching the public hostname.", "The relay data stream is unencrypted; host TLS is always passed through."]),
+  ssh: limit("stable", false, false, ["Requires an existing SSH host, pinned host key, and permission for the public remote bind.", "GatewayPorts policy may deny the requested public listener."]),
+  netbird: limit("beta", true, false, ["Public reverse proxy availability, L4 ports and quotas depend on the selected cluster.", "Visitor SSO, PIN, password and header authentication must be disabled; private membership is external."]),
+  ngrok: limit("stable", true, false, ["Existing publisher account required; free traffic/request/endpoint quotas and warning page apply.", "TCP may require card verification; TLS/domain features depend on the configured plan."]),
+  zrok: limit("stable", true, true, ["Public frontend terminates outer TLS; application encryption remains required.", "Free daily traffic quota, anti-abuse interstitial and reserved-name availability apply."]),
+  pangolin: limit("stable", true, false, ["Public HTTP resource uses the selected Cloud or existing deployment.", "Raw Cloud TCP/UDP requires a separately owned remote node; no visitor authentication is enabled."]),
+  pinggy: limit("stable", true, true, ["Free tunnels expire after 60 minutes and use temporary names.", "TLS passthrough needs a matching host certificate; persistent names require an explicitly enabled paid plan."], { maximumSessionMs: 3_600_000 }),
+  "dev-tunnels": limit("beta", true, false, ["Development service; publisher account required, anonymous visitors only.", "Free traffic quota and anti-phishing page apply; the 16 MiB HTTP body limit does not establish WSS message limits."], { maximumRequestBytes: 16 * 1024 * 1024 }),
+  localtunnel: limit("experimental", true, true, ["Public instance has no SLA and can show an anti-abuse page; requested names are not guaranteed.", "Old client dependencies and actual WSS/long-stream behavior require deployment verification."])
+});

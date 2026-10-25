@@ -1,1 +1,2 @@
 packages/cloudflare/cloudflared-restricted.patch text eol=lf -whitespace
+packages/**/THIRD_PARTY_NOTICES* -text -whitespace

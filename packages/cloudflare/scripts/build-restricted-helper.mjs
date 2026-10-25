@@ -13,7 +13,7 @@ export const SOURCE_COMMIT = 'de6376c5af4a67cbc65258682e5a01781827643d';
 export const SOURCE_URL = `https://codeload.github.com/cloudflare/cloudflared/tar.gz/${SOURCE_COMMIT}`;
 export const SOURCE_BYTES = 651992;
 export const SOURCE_SHA256 = '6c6901ae333508e1c529184bf90cb87ff59592620d293401db38415269908311';
-const targets = { 'win32-x64': ['windows', 'amd64'], 'linux-x64': ['linux', 'amd64'], 'linux-arm64': ['linux', 'arm64'], 'darwin-x64': ['darwin', 'amd64'], 'darwin-arm64': ['darwin', 'arm64'] };
+const targets = { 'win32-x64': ['windows', 'amd64'], 'win32-arm64': ['windows', 'arm64'], 'linux-x64': ['linux', 'amd64'], 'linux-arm64': ['linux', 'arm64'], 'darwin-x64': ['darwin', 'amd64'], 'darwin-arm64': ['darwin', 'arm64'] };
 
 /** Explicit build preparation only. No downloaded or upstream executable runs. */
 export async function buildRestrictedHelper({ directory, target = `${process.platform}-${process.arch}`, goExecutable = process.env.LINKSPAN_GO_EXECUTABLE ?? 'go', signal, runTests = true }) {

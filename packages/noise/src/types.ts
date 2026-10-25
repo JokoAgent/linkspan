@@ -1,4 +1,6 @@
 import type { ByteChannel, OperationOptions } from "@jokoagent/linkspan-core";
+import type { StreamCarrier } from "@jokoagent/linkspan-core/stream";
+export type { StreamCarrier } from "@jokoagent/linkspan-core/stream";
 
 export interface Identity {
   /** Host-owned protobuf-encoded Ed25519 private key. Never send to a connector. */
@@ -36,4 +38,9 @@ export interface ConnectWebSocketOptions extends OperationOptions {
 
 export interface AcceptWebSocketOptions extends OperationOptions {
   identity: Identity;
+}
+
+export interface ConnectStreamOptions extends OperationOptions {
+  expectedPublicKey: string;
+  identity?: Identity;
 }

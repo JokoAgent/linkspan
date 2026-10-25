@@ -1,0 +1,13 @@
+{
+  "version": "1.2.0",
+  "sourceCommit": "66a8d619a4d791d458d582f312df6e0ab42bc541",
+  "targets": {
+    "win32-x64": { "package": "iroh-win32-x64-msvc", "integrity": "sha512-3ltCadoaZzrRM9OmPcfwPpqwF/DBXlzhwsOIXITtpFEFfRISgvbqyhmMCaiumpyXxFeGTCfpwvUJ40i+sE0sVQ==" },
+    "win32-arm64": { "package": "iroh-win32-arm64-msvc", "integrity": "sha512-2srn9OquRffLD1bQiCDRLr3T1yxmc9xc3k4oLgEMWU+lZnaMONRS2r46cTXN1b/bGsSc82TjGCO/urauXZjQcQ==" },
+    "darwin-arm64": { "package": "iroh-darwin-arm64", "integrity": "sha512-91oxmPrYiCnU0APp/Ky0mgNOxaIukQDFUvxth32TDq38vJs0lDX9ppAsWrkCA+4A/kJnAt1hc7YhIKcIGD3xOA==" },
+    "linux-x64": { "package": "iroh-linux-x64-gnu", "integrity": "sha512-SkZUe/dqv7J1kY3Af0Cu07ldfdstEDOz6F3yIKwMw/EpabhaE3fvdDbiDQoiMxbwgIiJMspChHRMZeC88Td3QQ==" },
+    "linux-x64-musl": { "package": "iroh-linux-x64-musl", "integrity": "sha512-UnZHStWdFZgylftmX2IHF+VKkrkbEhK+amkOf7A9Z3JPrqkbF5em3UW3uyDK3qfhcc9Ijc3nnYKxym+BkOLPjQ==" },
+    "linux-arm64": { "package": "iroh-linux-arm64-gnu", "integrity": "sha512-LEenFEMMWLnlyFy8++cYq+s7/nibFgFzs1kGDk7WvFDyxT3U2z0W0+hjENzDiS1iCtH8+zesdDdFxuQtxjJHYg==" },
+    "linux-arm64-musl": { "package": "iroh-linux-arm64-musl", "integrity": "sha512-YgCWpz80VOTJRtAUsTKFgLYtd7tfWwrRCD0uk3/xG4z+AjiY5c49toeDFTJJ/3SF5Q8qmjWGjpcUk6B1E55D4w==" }
+  }
+}

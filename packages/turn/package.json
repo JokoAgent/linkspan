@@ -1,0 +1,16 @@
+{
+  "name": "@jokoagent/linkspan-turn",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Server-only, explicitly selected Twilio and coturn REST credential adapters",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./twilio": { "types": "./dist/twilio.d.ts", "import": "./dist/twilio.js" },
+    "./coturn": { "types": "./dist/coturn.d.ts", "import": "./dist/coturn.js" }
+  },
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "node --test test/*.test.mjs" },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*" },
+  "engines": { "node": ">=24.16.0" }
+}

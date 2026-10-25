@@ -1,0 +1,7 @@
+{
+  "module": "LinkspanIroh",
+  "protocol": "linkspan-stream-bridge/1",
+  "methods": ["isAvailable", "request", "dispose"],
+  "android": { "minimumSdk": 24, "sources": ["android/LinkspanIrohEngine.kt", "android/LinkspanIrohModule.kt"] },
+  "ios": { "minimumDeploymentTarget": "16.4", "sourceBuildRequired": true, "sources": ["ios/LinkspanIrohEngine.swift", "ios/LinkspanIrohModule.swift"] }
+}

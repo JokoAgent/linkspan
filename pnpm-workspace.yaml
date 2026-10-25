@@ -1,7 +1,16 @@
 packages:
   - packages/*
 
+# Development peers resolve to these workspaces; packed consumers receive exact
+# versions and explicitly install only their selected optional runtime.
+linkWorkspacePackages: true
+
 minimumReleaseAge: 1440
 allowBuilds:
+  '@pinggy/pinggy': false
+  bufferutil: false
+  cpu-features: false
+  es5-ext: false
   esbuild: true
-
+  ssh2: false
+  utf-8-validate: false

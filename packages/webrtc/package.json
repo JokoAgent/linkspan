@@ -1,0 +1,11 @@
+{
+  "name": "@jokoagent/linkspan-webrtc",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Bounded reliable WebRTC data-channel carrier with trusted DTLS certificate pinning",
+  "exports": { ".": { "types": "./dist/index.d.ts", "react-native": "./dist/index.js", "import": "./dist/index.js" } },
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "node --test test/*.test.mjs" },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*" }
+}

@@ -1,0 +1,19 @@
+{
+  "upstream": "iroh-ffi@1.2.0",
+  "sourceCommit": "66a8d619a4d791d458d582f312df6e0ab42bc541",
+  "source": { "url": "https://codeload.github.com/n0-computer/iroh-ffi/tar.gz/66a8d619a4d791d458d582f312df6e0ab42bc541", "sha256": "651aea36803ce957add850f8defbbd17ee3735894e709b409b6031b8e8a56900", "bytes": 1284445 },
+  "iosHeaders": { "url": "https://github.com/n0-computer/iroh-ffi/releases/download/v1.2.0/IrohLib.xcframework.zip", "bytes": 40626759, "sha256": "4a97b06ecb1d418e17a96a45b6c7e5d063a12a6dfb6600389a7b5b2ae21ae18a" },
+  "android": {
+    "irohAar": { "url": "https://repo.maven.apache.org/maven2/computer/iroh/iroh-android/1.2.0/iroh-android-1.2.0.aar", "bytes": 22914758, "sha256": "2fa89f12369eca9c3d73be318ef70e36444610e6836c6a92caa115af866c2ce6" },
+    "irohJar": { "url": "https://repo.maven.apache.org/maven2/computer/iroh/iroh/1.2.0/iroh-1.2.0.jar", "bytes": 25346116, "sha256": "acdbccf07885300e9e2f3a04c368b7647981f53aae9d2b97ce61276f97017d4b" },
+    "jnaAar": { "url": "https://repo.maven.apache.org/maven2/net/java/dev/jna/jna/5.19.1/jna-5.19.1.aar", "bytes": 525093, "sha256": "b57125cb7d16253f0d65a80f7d3a4c3664effa711b8bdbb7f87fb572ce1624ed" }
+  },
+  "androidJna": { "version": "5.19.1", "reason": "The upstream 5.15.0 JNI runtime has Android16KB bugs fixed in JNA5.16/5.17, and its x86_64 ELF is only4KB aligned. Pair Java and JNI from the same fixed updated input.", "evidence": "https://github.com/java-native-access/jna/blob/5.19.1/CHANGES.md" },
+  "notices": [
+    { "name": "JNA 5.19.1 LICENSE", "url": "https://raw.githubusercontent.com/java-native-access/jna/5.19.1/LICENSE", "bytes": 797, "sha256": "07c938b23950ab7d47a24ef35f9f5da3a05ae164278dc959ad6994135ed59ff1" },
+    { "name": "JNA 5.19.1 Apache-2.0 option", "url": "https://raw.githubusercontent.com/java-native-access/jna/5.19.1/AL2.0", "bytes": 10174, "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594" },
+    { "name": "JNA 5.19.1 bundled libffi LICENSE", "url": "https://raw.githubusercontent.com/java-native-access/jna/5.19.1/native/libffi/LICENSE", "bytes": 1132, "sha256": "2c9c2acb9743e6b007b91350475308aee44691d96aa20eacef8e199988c8c388" },
+    { "name": "Kotlin 2.2.21 LICENSE", "url": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.2.21/license/LICENSE.txt", "bytes": 11358, "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30" },
+    { "name": "kotlinx.coroutines 1.9.0 LICENSE", "url": "https://raw.githubusercontent.com/Kotlin/kotlinx.coroutines/1.9.0/LICENSE.txt", "bytes": 11398, "sha256": "b1febe6399dffb10d19d35e7663ab16300c93cb0476a94115df1cc0097a8ffd8" }
+  ]
+}

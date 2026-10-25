@@ -1,0 +1,5 @@
+{
+  "purpose": "Fixed synthetic, unregistered API secret produced by official ApiSecret::new with seed [7;32], and recipient public key from seed [11;32]. It cannot authorize hosted paid usage.",
+  "apiSecret": "servicesaaqaobyha4dqobyha4dqobyha4dqobyha4dqobyha4dqobyha4dqob75c4sdqwvay5nwj63yzvqc7iozsh66x53lcpcy5vyc5ledl2pwdaaa",
+  "endpointId": "66be7e332c7a453332bd9d0a7f7db055f5c5ef1a06ada66d98b39fb6810c473a"
+}

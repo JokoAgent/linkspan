@@ -1,0 +1,7 @@
+{
+  "name": "@jokoagent/linkspan-tailcat-node", "version": "0.1.0", "type": "module",
+  "files": ["dist", "helper", "scripts", "README.md"],
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }, "./prepare": "./scripts/prepare.mjs" },
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "node --test test/*.test.mjs" },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*", "@jokoagent/linkspan-tailcat-runtime": "workspace:*" }
+}

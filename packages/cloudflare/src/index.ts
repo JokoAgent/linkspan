@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { CloudflareConnectorError, cloudflaredArtifact, verifyCloudflared } from "./artifacts.js";
 export * from "./artifacts.js";
+export * from "./named.js";
 
 export const QUICK_TUNNEL_LIMITS = Object.freeze({
   temporaryHostname: true,
@@ -50,6 +51,30 @@ export interface QuickTunnel {
   readonly closed: Promise<CloudflareTunnelExit>;
   /** Idempotent, bounded shutdown of exactly this owned child process. */
   close(): Promise<void>;
+}
+
+export interface NamedTunnelOptions extends QuickTunnelOptions {
+  readonly accountId: string;
+  readonly tunnelId: string;
+  /** Locally managed tunnel secret; not a Cloudflare API token or host key. */
+  readonly tunnelSecret: string;
+  readonly publicOrigin: string;
+}
+export interface NamedTunnel extends Omit<QuickTunnel, "kind" | "limits"> {
+  readonly kind: "cloudflare.named";
+  readonly limits: Readonly<{ temporaryHostname: false; serviceLevelAgreement: false; notes: readonly string[] }>;
+}
+const NAMED_TUNNEL_LIMITS = Object.freeze({ temporaryHostname: false as const, serviceLevelAgreement: false as const,
+  notes: Object.freeze(["Existing publisher account and domain required; CDN plan, request, upload and connection limits apply.", "Outer TLS terminates at Cloudflare; only the fixed encrypted application carrier is exposed."]) });
+
+export async function startNamedTunnel(options: NamedTunnelOptions): Promise<NamedTunnel> {
+  if (!/^[a-f0-9]{32}$/u.test(options.accountId) || !/^[a-f0-9-]{36}$/u.test(options.tunnelId)
+    || !/^[A-Za-z0-9+/]{43}=$/u.test(options.tunnelSecret)) throw new CloudflareConnectorError("invalid_input", "A locally managed tunnel identity and 32-byte secret are required.");
+  let origin: URL;
+  try { origin = new URL(options.publicOrigin); } catch { throw invalidOrigin(); }
+  if (origin.protocol !== "https:" || origin.username || origin.password || origin.port || origin.pathname !== "/" || origin.search || origin.hash) throw new CloudflareConnectorError("invalid_input", "The named tunnel requires a public HTTPS hostname.");
+  const result = await startCloudflareTunnel(options, options);
+  return Object.freeze({ ...result, kind: "cloudflare.named", limits: NAMED_TUNNEL_LIMITS });
 }
 
 /** Validates without probing the target or starting a backend. */
@@ -102,6 +127,10 @@ function abortFailure(signal?: AbortSignal, deadline?: number): CloudflareConnec
  * The host owns business authorization and must expose only its encrypted carrier.
  */
 export async function startQuickTunnel(options: QuickTunnelOptions): Promise<QuickTunnel> {
+  return startCloudflareTunnel(options);
+}
+
+async function startCloudflareTunnel(options: QuickTunnelOptions, named?: NamedTunnelOptions): Promise<QuickTunnel> {
   const localOrigin = validateCloudflareLocalOrigin(options.localOrigin);
   validateOriginServerName(options.originServerName);
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(options.requestId)) throw new CloudflareConnectorError("invalid_input", "A bounded stable connector request identity is required.");
@@ -136,9 +165,15 @@ export async function startQuickTunnel(options: QuickTunnelOptions): Promise<Qui
   let child: ChildProcess;
   try {
     await chmod(directory, 0o700);
-    await writeFile(config, "# Managed single-origin Linkspan carrier.\n{}\n", { flag: "wx", mode: 0o600 });
+    if (named) {
+      const credentials = join(directory, "credentials.json");
+      await writeFile(credentials, JSON.stringify({ AccountTag: named.accountId, TunnelID: named.tunnelId, TunnelSecret: named.tunnelSecret }), { flag: "wx", mode: 0o600 });
+      await writeFile(config, JSON.stringify({ tunnel: named.tunnelId, "credentials-file": credentials,
+        ingress: [{ hostname: new URL(named.publicOrigin).hostname, service: localOrigin,
+          originRequest: { caPool: certificateBundle, originServerName: options.originServerName } }, { service: "http_status:404" }] }), { flag: "wx", mode: 0o600 });
+    } else await writeFile(config, "# Managed single-origin Linkspan carrier.\n{}\n", { flag: "wx", mode: 0o600 });
     await writeFile(certificateBundle, originCaPool, { flag: "wx", mode: 0o600 });
-    child = spawn(options.executable, ["tunnel", "--config", config, "--no-autoupdate", "--protocol", "http2", "--metrics", "127.0.0.1:0", "--management-diagnostics=false", "--loglevel", "info", "--origin-ca-pool", certificateBundle, "--origin-server-name", options.originServerName, "--url", localOrigin], {
+    child = spawn(options.executable, ["tunnel", "--config", config, "--no-autoupdate", "--protocol", "http2", "--metrics", "127.0.0.1:0", "--management-diagnostics=false", "--loglevel", "info", ...(named ? ["run", named.tunnelId] : ["--origin-ca-pool", certificateBundle, "--origin-server-name", options.originServerName, "--url", localOrigin])], {
       cwd: directory, env: environment, stdio: ["ignore", "pipe", "pipe"], windowsHide: true, shell: false
     });
   } catch {
@@ -148,7 +183,7 @@ export async function startQuickTunnel(options: QuickTunnelOptions): Promise<Qui
 
   let stopping = false;
   let exitSeen = false;
-  let url: string | undefined;
+  let url: string | undefined = named?.publicOrigin.replace(/\/$/u, "");
   let registered = false;
   let readySettled = false;
   let resolveReady!: (origin: string) => void;

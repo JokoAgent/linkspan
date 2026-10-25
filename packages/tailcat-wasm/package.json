@@ -1,0 +1,10 @@
+{
+  "name": "@jokoagent/linkspan-tailcat-wasm", "version": "0.1.0", "type": "module",
+  "files": ["dist", "scripts", "README.md"],
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }, "./prepare": "./scripts/prepare.mjs" },
+  "scripts": { "build": "tsc -p tsconfig.json", "build:wasm": "node scripts/prepare.mjs", "test": "node --test test/*.test.mjs" },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*", "@jokoagent/linkspan-tailcat-runtime": "workspace:*" },
+  "devDependencies": { "@jokoagent/linkspan-tailcat-node": "workspace:*" },
+  "peerDependencies": { "@jokoagent/linkspan-tailcat-node": "workspace:*" },
+  "peerDependenciesMeta": { "@jokoagent/linkspan-tailcat-node": { "optional": true } }
+}

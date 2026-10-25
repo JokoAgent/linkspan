@@ -17,6 +17,7 @@ import urllib.request
 import zipfile
 
 EXPECTED = {
+    "win32-arm64": ("win32-arm64/cloudflared.exe", "af1d88e85c34d702f5c5e0673f8554d6586e48ca7acc9506903880c6b0cc0a51"),
     "win32-x64": ("win32-x64/cloudflared.exe", "9d23f8b8bee69f4db958a59e44480a9d49242e1e50264ecb1de49428639ee360"),
     "linux-x64": ("linux-x64/cloudflared", "7e0373c8786337d2babc809cf0e5ce8ab365c12782dfab89299271a34f83c694"),
     "linux-arm64": ("linux-arm64/cloudflared", "6b5693dcbf0d712cff5657eb97fe68e484bbcfe4bfa2efff336ac49777472f55"),
@@ -120,7 +121,7 @@ def main():
         collected = list(pool.map(collect, modules))
     go_license_url = "https://raw.githubusercontent.com/golang/go/go1.27.3/LICENSE"
     go_license = download(go_license_url).decode("utf-8")
-    output = ["# Third-party notices in cloudflared 2026.10.3-linkspan.1", "", "Generated from the five pinned restricted helper binaries; module versions and Go h1 checksums are taken from their embedded build information. All collected module archives passed the embedded Go content checksums, including replacement modules. This collection preserves license/notice files found in these exact modules and the Go standard library license; it does not assign a new license to Linkspan.", "", "These are modified builds of source de6376c5af4a67cbc65258682e5a01781827643d, with the accompanying cloudflared-restricted.patch applied and fixed Go 1.27.3 build inputs. They are not the official Cloudflare release executables.", "", "## Go standard library 1.27.3", "", go_license_url, "", "~~~~text", go_license.rstrip(), "~~~~", ""]
+    output = ["# Third-party notices in cloudflared 2026.10.3-linkspan.1", "", "Generated from the six pinned restricted helper binaries; module versions and Go h1 checksums are taken from their embedded build information. All collected module archives passed the embedded Go content checksums, including replacement modules. The Windows arm64 module graph is fully covered by the existing collected module archives. This collection preserves license/notice files found in these exact modules and the Go standard library license; it does not assign a new license to Linkspan.", "", "These are modified builds of source de6376c5af4a67cbc65258682e5a01781827643d, with the accompanying cloudflared-restricted.patch applied and fixed Go 1.27.3 build inputs. They are not the official Cloudflare release executables.", "", "## Go standard library 1.27.3", "", go_license_url, "", "~~~~text", go_license.rstrip(), "~~~~", ""]
     for item in collected:
         output.extend(["## " + item["path"] + " " + item["version"], "", "Content checksum: `" + item["h1"] + "`", "", item["source"], ""])
         for notice in item["notices"]:

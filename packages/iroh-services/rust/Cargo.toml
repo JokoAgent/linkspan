@@ -1,0 +1,26 @@
+[package]
+name = "linkspan_iroh_services"
+version = "0.1.0"
+edition = "2024"
+publish = false
+rust-version = "1.99"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+iroh = { version = "=1.4.1", default-features = false, features = ["tls-ring"] }
+iroh-services = { version = "=1.0.0", default-features = false }
+iroh-tickets = "=1.0.0"
+rcan = "=0.4.1"
+data-encoding = "2"
+wasm-bindgen = "=0.2.112"
+js-sys = "=0.3.89"
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

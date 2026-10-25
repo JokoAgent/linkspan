@@ -36,7 +36,7 @@ connector transfers ciphertext; host business keys and endpoint private keys
 are never inputs. This is process separation, not an operating system sandbox.
 
 `cloudflaredArtifact(target?)` returns immutable metadata without starting or
-downloading anything. Supported helper targets are `win32-x64`, `linux-x64`,
+downloading anything. Supported helper targets are `win32-x64`, `win32-arm64`, `linux-x64`,
 `linux-arm64`, `darwin-x64`, and `darwin-arm64`. Cross-target preparation is
 supported; execution requires the actual host target. The package does not
 include other targets' binaries or a browser/WASM implementation. Application
@@ -113,3 +113,18 @@ No supplier account, paid resource or plan upgrade is created by these calls.
 Using an existing account remains subject to that account's traffic quota and
 billing settings. No provider-specific client SDK or WASM is needed.
 API evidence: [credential generation and revocation](https://developers.cloudflare.com/realtime/turn/generate-credentials/).
+
+`startNamedTunnel` uses the same restricted helper and fixed CA/SNI origin with
+`accountId`, `tunnelId`, a private locally managed 32-byte `tunnelSecret`, and an
+existing public HTTPS hostname. It writes a private local credential file and
+one fixed local ingress. It does not accept remote-managed ingress tokens or
+enable visitor Access authentication.
+
+`createNamedTunnelSecret`, `createNamedTunnel`, `findNamedTunnel`, and
+`deleteNamedTunnel` manage that locally configured resource. The host records
+the original random operation and secret before creation. Name-only discovery
+returns an unowned candidate. An exact `expectedResource` lookup cannot create a
+replacement. Ambiguous dispatched writes remain unknown; cleanup verifies the
+original account/ID/name/local configuration before deletion. DNS/CNAME setup
+for the owned hostname remains a separate deployment action. Real account,
+regional/network and hosted stream checks are distinct from API/helper tests.

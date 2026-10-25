@@ -1,0 +1,30 @@
+[package]
+name = "linkspan_iroh"
+version = "0.1.0"
+edition = "2024"
+publish = false
+rust-version = "1.99"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+iroh = { version = "=1.4.1", default-features = false, features = ["tls-ring"] }
+iroh-tickets = "=1.0.0"
+iroh-services = { version = "=1.0.0", default-features = false }
+data-encoding = "2"
+rcan = "=0.4.1"
+n0-future = "=0.3.2"
+wasm-bindgen = "=0.2.112"
+wasm-bindgen-futures = "=0.4.62"
+js-sys = "=0.3.89"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["sync"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

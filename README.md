@@ -11,10 +11,20 @@ host, RPC schema, device model, database or account service.
 | `@jokoagent/linkspan-noise` | Pinned Noise over ordinary WebSocket | Core; bundled pure JS security implementation |
 | `@jokoagent/linkspan-http` | Optional concurrent HTTP streams and Fetch adapter | Core; Node bridge is a separate entry |
 | `@jokoagent/linkspan-cloudflare` | Explicitly prepared, managed server connector | Node-only; no helper downloaded on installation |
+| `@jokoagent/linkspan-connectors` | Public carrier lifecycle, fixed helper preparation, management and separate UDP mappings | Selected provider packages/helpers only; [mode matrix](packages/connectors/README.md) |
+| `@jokoagent/linkspan-connector-runtime` | Bounded fixed-origin runtime shared by selected providers | Core; no vendor SDK |
+| `@jokoagent/linkspan-ngrok`, `-ssh`, `-pinggy`, `-dev-tunnels`, `-localtunnel` | Independently selected SDK carriers | Only the chosen SDK and its documented upstream dependencies |
+| `@jokoagent/linkspan-iroh`, `-tailcat` | Pinned peer streams using the same authenticated Noise channel | Optional Node or browser/native binding |
+| `@jokoagent/linkspan-iroh-node`, `-tailcat-node` | Selected-target native runtime preparation | Build-time preparation; no default native payload in source archives |
+| `@jokoagent/linkspan-iroh-wasm`, `-tailcat-wasm` | Browser and trusted Mobile bridge runtimes | Separate real WASM resources, loaded only when selected |
+| `@jokoagent/linkspan-iroh-services` | Short-lived relay-use capabilities for exact peer identities | Host-only private signing secret; separate small WASM signer |
+| `@jokoagent/linkspan-tailcat-runtime` | Shared private tailcat address/key validation | Core; no vendor runtime |
+| `@jokoagent/linkspan-turn` | Explicit Twilio Token and coturn REST issuance and TTL retirement | Server-only signing; original host media authority required |
+| `@jokoagent/linkspan-webrtc` | Bounded reliable ordered RTC data channels with trusted DTLS pinning | Existing platform RTC engine; no unrelated SDK |
 
 The initial security implementation is `@libp2p/noise@17.0.7`, using its
 Noise XX handshake, signed Ed25519 identity and ChaCha20-Poly1305 transport.
-The published browser implementation is bundled for Node, Web and React Native;
+The upstream browser implementation is bundled for Node, Web and React Native;
 it contains no native binary or WASM. Upstream dependencies and their licenses
 are pinned and included in the security package. The host supplies a full
 `ed25519:<64 lowercase hex digits>` public key obtained through a trusted channel.

@@ -1,0 +1,9 @@
+{
+  "name": "@jokoagent/linkspan-iroh-node", "version": "0.1.0", "type": "module",
+  "files": ["dist", "scripts", "upstream.json", "mobile-inputs.json", "README.md", "THIRD_PARTY_NOTICES.txt", "rust-dependencies.json"],
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }, "./prepare": "./scripts/prepare.mjs", "./prepare-mobile": "./scripts/prepare-mobile.mjs" },
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "node --test test/*.test.mjs", "test:native-kotlin": "node scripts/test-native-kotlin.mjs" },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*" },
+  "peerDependencies": { "@jokoagent/linkspan-iroh-wasm": "workspace:*", "@jokoagent/linkspan-iroh-services": "workspace:*" },
+  "peerDependenciesMeta": { "@jokoagent/linkspan-iroh-wasm": { "optional": true }, "@jokoagent/linkspan-iroh-services": { "optional": true } }
+}

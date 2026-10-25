@@ -1,6 +1,6 @@
 {
   "name": "@jokoagent/linkspan-http",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "type": "module",
   "files": ["dist", "README.md"],
   "exports": {

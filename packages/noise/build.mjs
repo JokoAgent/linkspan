@@ -63,5 +63,5 @@ for (const [identity, value] of [...packages.entries()].sort(([a], [b]) => a.loc
 }
 await writeFile(path.join(directory, "dist/THIRD_PARTY_LICENSES.txt"), notices.join(""));
 await writeFile(path.join(directory, "dist/dependency-inventory.json"), `${JSON.stringify(inventory, null, 2)}\n`);
-for (const name of ["channel.d.ts", "identity.d.ts", "socket.d.ts", "promise-shim.d.ts"]) await unlink(path.join(directory, "dist", name));
+for (const name of ["channel.d.ts", "identity.d.ts", "socket.d.ts", "stream.d.ts", "promise-shim.d.ts"]) await unlink(path.join(directory, "dist", name));
 console.log(`Portable Noise artifact: ${inventory.length} bundled packages; no supplier SDK, native binary, or WASM`);

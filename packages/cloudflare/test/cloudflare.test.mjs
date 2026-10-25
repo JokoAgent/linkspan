@@ -12,7 +12,8 @@ test('metadata is target-specific and unsupported platforms fail without downloa
     ['linux-x64', 40104141, '7e0373c8786337d2babc809cf0e5ce8ab365c12782dfab89299271a34f83c694'],
     ['linux-arm64', 37499101, '6b5693dcbf0d712cff5657eb97fe68e484bbcfe4bfa2efff336ac49777472f55'],
     ['darwin-x64', 41248368, '14e9b5dd552cbe488207010232298b78e3bcbd846740cc5ac002c1df5f2a2efb'],
-    ['darwin-arm64', 39053522, '873c1903c21639879653cdc5a9c2dd8dfd06f0571daf518ae45950512d819930']
+    ['darwin-arm64', 39053522, '873c1903c21639879653cdc5a9c2dd8dfd06f0571daf518ae45950512d819930'],
+    ['win32-arm64', 37160448, 'af1d88e85c34d702f5c5e0673f8554d6586e48ca7acc9506903880c6b0cc0a51']
   ]
   for (const [target, bytes, digest] of expected) {
     const artifact = cloudflaredArtifact(target)
@@ -23,7 +24,7 @@ test('metadata is target-specific and unsupported platforms fail without downloa
     assert.equal(artifact.sourceSha256, '6c6901ae333508e1c529184bf90cb87ff59592620d293401db38415269908311')
     assert.ok(Object.isFrozen(artifact))
   }
-  for (const target of ['win32-arm64', 'linux-ia32', 'android-arm64', '__proto__']) {
+  for (const target of ['win32-ia32', 'linux-ia32', 'android-arm64', '__proto__']) {
     assert.throws(() => cloudflaredArtifact(target), { code: 'unsupported_platform' })
   }
   assert.equal(QUICK_TUNNEL_LIMITS.maximumInflightRequests, 200)

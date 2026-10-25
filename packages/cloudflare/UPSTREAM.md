@@ -39,14 +39,15 @@ must match it before use. Runtime startup never builds or downloads code.
 
 The preparation check exercises forged configuration/TCP internal headers
 against the actual patched edge handler and checks that neither reaches an
-origin dispatcher; HTTP/WSS still dispatches normally. All five targets were
+origin dispatcher; HTTP/WSS still dispatches normally. All six targets were
 cross-built on Windows; other operating systems still require their own runtime
-checks before a host claims support. No Windows arm64 target is supplied.
+checks before a host claims support. Windows arm64 is a verified source cross-build;
+its runtime behavior still requires an arm64 device or runner.
 
 This package contains no helper executable and no install script. Hosts that
 redistribute a prepared helper must retain its source/license materials.
 `THIRD_PARTY_NOTICES.cloudflared.md` preserves 98 license/notice files from the
-70 modules actually linked across the five pinned restricted targets and the Go standard
+70 modules actually linked across the six pinned restricted targets and the Go standard
 library license. `cloudflared.build-inputs.json` records exact module identities,
 replacement modules, embedded Go content checksums and collected notice hashes.
 The maintenance generator checks every module archive against the content
