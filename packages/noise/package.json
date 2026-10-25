@@ -1,0 +1,22 @@
+{
+  "name": "@jokoagent/linkspan-noise",
+  "version": "0.1.1",
+  "description": "Pinned endpoint Noise channels over ordinary WebSocket carriers",
+  "type": "module",
+  "repository": { "type": "git", "url": "https://github.com/JokoAgent/linkspan.git", "directory": "packages/noise" },
+  "files": ["dist", "README.md", "THIRD_PARTY_NOTICES.md"],
+  "exports": { ".": { "types": "./dist/index.d.ts", "react-native": "./dist/index.js", "import": "./dist/index.js" } },
+  "sideEffects": false,
+  "scripts": { "build": "node build.mjs", "test": "node --test test/*.test.mjs" },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*" },
+  "devDependencies": {
+    "@libp2p/noise": "17.0.7",
+    "@libp2p/crypto": "5.2.0",
+    "@libp2p/peer-id": "6.0.18",
+    "@libp2p/interface": "3.4.0",
+    "@libp2p/utils": "7.4.5",
+    "uint8arraylist": "3.0.2",
+    "esbuild": "0.28.2",
+    "ws": "8.22.0"
+  }
+}

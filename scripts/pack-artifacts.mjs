@@ -1,0 +1,79 @@
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { t as listTar } from 'tar';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+const sourceTree = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { cwd: root, encoding: 'utf8' }).trim();
+const clean = execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim() === '';
+if (!clean) throw new Error('Commit the source before producing fixed consumer artifacts.');
+const destination = resolve(process.argv[2] ?? join(root, '.runtime', 'packages', sourceCommit));
+await mkdir(destination, { recursive: true });
+if (!process.env.npm_execpath) throw new Error('Run through pnpm pack:artifacts so the pinned package manager is used.');
+const packageManager = /\.[cm]?js$/iu.test(process.env.npm_execpath)
+  ? { executable: process.execPath, args: [process.env.npm_execpath] }
+  : { executable: process.env.npm_execpath, args: [] };
+const packages = [];
+for (const name of ['core', 'noise', 'http', 'cloudflare']) {
+  const directory = join(root, 'packages', name);
+  const manifest = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8'));
+  execFileSync(packageManager.executable, [...packageManager.args, 'pack', '--pack-destination', destination], { cwd: directory, stdio: 'inherit' });
+  const filename = `${manifest.name.replace('@', '').replace('/', '-')}-${manifest.version}.tgz`;
+  const entries = [];
+  let packedManifest;
+  await listTar({ file: join(destination, filename), strict: true, onReadEntry(entry) {
+    entries.push(entry.path);
+    if (entry.path === 'package/package.json') {
+      const chunks = [];
+      entry.on('data', chunk => chunks.push(chunk));
+      entry.on('end', () => { packedManifest = JSON.parse(Buffer.concat(chunks).toString('utf8')); });
+    }
+  } });
+  assert.equal(packedManifest?.name, manifest.name);
+  assert.equal(packedManifest?.version, manifest.version);
+  assert.ok(entries.includes('package/dist/index.js'));
+  assert.ok(entries.includes('package/dist/index.d.ts'));
+  assert.equal(entries.some(entry => /(?:\.wasm$|\.exe$|node_modules\/|\/src\/)/u.test(entry)), false);
+  if (name === 'core' || name === 'noise') {
+    const nativeEntry = packedManifest.exports?.['.']?.['react-native'];
+    assert.equal(typeof nativeEntry, 'string');
+    assert.equal(nativeEntry, packedManifest.exports['.'].import);
+    assert.ok(nativeEntry.startsWith('./dist/'));
+    assert.ok(entries.includes(`package/${nativeEntry.slice(2)}`), 'The public native entry must exist inside the fixed package.');
+  }
+  if (name === 'core') assert.deepEqual(packedManifest.dependencies ?? {}, {});
+  if (name === 'noise') {
+    assert.deepEqual(packedManifest.dependencies, { '@jokoagent/linkspan-core': manifest.version });
+    assert.ok(entries.includes('package/dist/THIRD_PARTY_LICENSES.txt'));
+    assert.ok(entries.includes('package/dist/dependency-inventory.json'));
+  }
+  if (name === 'cloudflare') {
+    for (const required of ['LICENSE.cloudflared', 'UPSTREAM.md', 'THIRD_PARTY_NOTICES.cloudflared.md', 'cloudflared.build-inputs.json',
+      'cloudflared-restricted.patch', 'scripts/build-restricted-helper.mjs', 'scripts/restricted-http2-test.go', 'scripts/restricted-origin-test.go', 'scripts/restricted-tls-test.go', 'dist/turn.js', 'dist/turn.d.ts']) assert.ok(entries.includes(`package/${required}`));
+    assert.equal(packedManifest.exports['./turn'].import, './dist/turn.js');
+  }
+  const bytes = await readFile(join(destination, filename));
+  packages.push({ name: manifest.name, version: manifest.version, file: filename, bytes: bytes.length,
+    sha256: createHash('sha256').update(bytes).digest('hex'), integrity: `sha512-${createHash('sha512').update(bytes).digest('base64')}` });
+}
+await writeFile(join(destination, 'manifest.json'), JSON.stringify({ sourceRepository: 'https://github.com/JokoAgent/linkspan', sourceCommit, sourceTree, packages }, null, 2) + '\n');
+// Verify the actual installation tree as well as the package manifest: a core
+// consumer must not download an adapter, SDK, helper or another platform payload.
+const consumer = await mkdtemp(join(tmpdir(), 'linkspan-core-consumer-'));
+try {
+  const core = packages.find(value => value.name === '@jokoagent/linkspan-core');
+  await writeFile(join(consumer, 'package.json'), JSON.stringify({ private: true, type: 'module', dependencies: {
+    [core.name]: `file:${join(destination, core.file).replaceAll('\\', '/')}`
+  } }));
+  execFileSync(packageManager.executable, [...packageManager.args, 'install', '--offline', '--ignore-scripts'], { cwd: consumer, stdio: 'inherit' });
+  const tree = JSON.parse(execFileSync(packageManager.executable, [...packageManager.args, 'list', '--depth', 'Infinity', '--json'], { cwd: consumer, encoding: 'utf8' }));
+  assert.deepEqual(Object.keys(tree[0].dependencies), [core.name]);
+  assert.deepEqual(tree[0].dependencies[core.name].dependencies ?? {}, {});
+  execFileSync(process.execPath, ['--input-type=module', '-e', 'const core = await import("@jokoagent/linkspan-core"); if (typeof core.createOperationScope !== "function") process.exit(1)'], { cwd: consumer, stdio: 'inherit' });
+} finally { await rm(consumer, { recursive: true, force: true }); }
+console.log(`Packed ${packages.length} independently consumable packages from ${sourceCommit} into ${destination}.`);

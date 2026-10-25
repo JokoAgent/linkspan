@@ -1,0 +1,16 @@
+{
+  "name": "@jokoagent/linkspan-http",
+  "version": "0.1.1",
+  "type": "module",
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./node": { "types": "./dist/node.d.ts", "default": "./dist/node.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*" },
+  "devDependencies": { "@jokoagent/linkspan-noise": "workspace:*", "ws": "8.22.0" }
+}

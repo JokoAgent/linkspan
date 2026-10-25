@@ -1,0 +1,20 @@
+{
+  "name": "linkspan-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "engines": { "node": ">=24.16.0" },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "check": "pnpm build && pnpm test",
+    "pack:artifacts": "node scripts/pack-artifacts.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "24.12.4",
+    "playwright-core": "1.60.0",
+    "tar": "7.5.22",
+    "typescript": "5.9.3"
+  }
+}

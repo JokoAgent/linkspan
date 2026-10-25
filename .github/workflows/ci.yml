@@ -1,0 +1,47 @@
+name: Linkspan library
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  library:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.27.3
+          cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - name: Build and verify the restricted helper for this runner
+        run: node --input-type=module -e "import {resolve} from 'node:path'; import {prepareCloudflared} from './packages/cloudflare/dist/index.js'; await prepareCloudflared({directory:resolve('.runtime/helpers')});"
+      - name: Verify fixed consumer tarballs and required notices
+        run: pnpm pack:artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linkspan-packages-${{ runner.os }}-${{ github.sha }}
+          path: .runtime/packages/${{ github.sha }}
+      - name: Install the pinned browser used by the independent library check
+        if: runner.os == 'Linux'
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Verify actual browser security and on-demand requests
+        if: runner.os == 'Linux'
+        env:
+          LINKSPAN_BROWSER_DRIVER: ${{ github.workspace }}/node_modules/playwright-core/index.mjs
+        run: node packages/noise/test/browser-check.mjs

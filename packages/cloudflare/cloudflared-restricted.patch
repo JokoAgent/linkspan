@@ -1,0 +1,23 @@
+diff --git a/connection/http2.go b/connection/http2.go
+--- a/connection/http2.go
++++ b/connection/http2.go
+@@ -102,3 +102,8 @@ func (c *HTTP2Connection) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+ 	connType := determineHTTP2Type(r)
++	// Linkspan carries only HTTP/WSS to its fixed, authenticated origin.
++	if connType == TypeConfiguration || connType == TypeTCP {
++		w.WriteHeader(http.StatusBadGateway)
++		return
++	}
+ 	handleMissingRequestParts(connType, r)
+ 
+diff --git a/proxy/proxy.go b/proxy/proxy.go
+--- a/proxy/proxy.go
++++ b/proxy/proxy.go
+@@ -142,3 +142,7 @@ func (p *Proxy) ProxyHTTP(
+ 	rule, ruleNum := p.ingressRules.FindMatchingRule(req.Host, req.URL.Path)
++	if ruleNum < 0 {
++		ruleSpan.End()
++		return fmt.Errorf("Linkspan's fixed carrier disables internal management routes")
++	}
+ 	ruleSpan.SetAttributes(attribute.Int("rule-num", ruleNum))
+ 	ruleSpan.End()

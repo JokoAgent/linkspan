@@ -1,0 +1,22 @@
+{
+  "@libp2p/interface@3.4.0": "https://raw.githubusercontent.com/libp2p/js-libp2p/2ca00af7ef79d1cd54e1b284f41ded62cbf894ac/LICENSE-MIT",
+  "main-event@1.0.5": "https://raw.githubusercontent.com/achingbrain/main-event/70285e87c435746aa37251e21a680dd4b75e0bbc/LICENSE-MIT",
+  "uint8arrays@6.1.1": "https://raw.githubusercontent.com/achingbrain/uint8arrays/4756683ff96a52f463e9b3514d49a0dceec7ca9c/LICENSE-MIT",
+  "uint8arraylist@3.0.2": "https://raw.githubusercontent.com/achingbrain/uint8arraylist/cc9aa9caac15ecf3a2fe127777f9c40a77710279/LICENSE-MIT",
+  "@libp2p/utils@7.4.5": "https://raw.githubusercontent.com/libp2p/js-libp2p/d41cc9fdd9b92596246deba0d4b8ad0078adfc69/LICENSE-MIT",
+  "uint8-varint@3.0.0": "https://raw.githubusercontent.com/achingbrain/uint8-varint/99ef35b50db2c4313bad0d0a70db4bd3f9329d14/LICENSE-MIT",
+  "@multiformats/multiaddr@13.0.3": "https://raw.githubusercontent.com/multiformats/js-multiaddr/35cc0d9d7ba94626fa9f5bd4d672b5f616afad3e/LICENSE-MIT",
+  "@multiformats/multiaddr-matcher@3.0.2": "https://raw.githubusercontent.com/multiformats/js-multiaddr-matcher/805490b0ce6bb4c7a94d77abee9922e7e363a478/LICENSE-MIT",
+  "it-pushable@3.2.4": "https://raw.githubusercontent.com/alanshaw/it-pushable/a78b307db5d6650893dc02215eefc4c1f46e11ae/LICENSE-MIT",
+  "race-signal@2.0.2": "https://raw.githubusercontent.com/achingbrain/race-signal/482de082caedf989d1e41d283277505785ae60fc/LICENSE-MIT",
+  "any-signal@4.2.0": "https://raw.githubusercontent.com/jacobheun/any-signal/5b8f5fcf9621373d686b3624275a689df9bbe81b/LICENSE-MIT",
+  "it-queueless-pushable@2.0.5": "https://raw.githubusercontent.com/achingbrain/it/92987b8b49c825d46db92c9161d8112b09972b81/LICENSE-MIT",
+  "it-merge@3.0.15": "https://raw.githubusercontent.com/achingbrain/it/b7c51ff2f8a1db866adb65429f4a6253d4732102/LICENSE-MIT",
+  "it-length-prefixed@11.0.1": "https://raw.githubusercontent.com/alanshaw/it-length-prefixed/6f51b27794ca9703f4f931d731a2ae2079c1dd71/LICENSE-MIT",
+  "weald@1.1.3": "https://raw.githubusercontent.com/achingbrain/weald/262dd18d86c44968bcaa1676d30bc97ed5d90aab/LICENSE-MIT",
+  "@libp2p/logger@6.2.16": "https://raw.githubusercontent.com/libp2p/js-libp2p/9f08ba198a231200813037b602f07a16ac486a95/LICENSE-MIT",
+  "@libp2p/noise@17.0.7": "https://raw.githubusercontent.com/libp2p/js-libp2p/d41cc9fdd9b92596246deba0d4b8ad0078adfc69/LICENSE-MIT",
+  "@libp2p/crypto@5.2.0": "https://raw.githubusercontent.com/libp2p/js-libp2p/9f08ba198a231200813037b602f07a16ac486a95/LICENSE-MIT",
+  "protons-runtime@7.1.2": "https://raw.githubusercontent.com/ipfs/protons/7b3bf06a48223684791e70f480331f9c89e7362a/LICENSE-MIT",
+  "@libp2p/peer-id@6.0.18": "https://raw.githubusercontent.com/libp2p/js-libp2p/9f08ba198a231200813037b602f07a16ac486a95/LICENSE-MIT"
+}
