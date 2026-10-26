@@ -33,12 +33,18 @@ async function invocation(config: ConnectorConfig, options: ConnectorOptions, br
   switch (config.provider) {
     case "frp": {
       address(config.serverAddress); port(config.serverPort); boundedText(config.token, "relay publisher token"); address(config.serverName);
-      if (!["tcp", "http", "https"].includes(config.mode)) invalid("Only public frp TCP, HTTP and HTTPS proxies are supported.");
+      if (!["tcp", "http", "https", "tcpmux"].includes(config.mode)) invalid("Only public frp TCP, HTTP, HTTPS and HTTP CONNECT proxies are supported.");
       const origin = publicOrigin(config.publicOrigin);
+      if (config.mode === "tcpmux") {
+        let proxy: URL;
+        try { proxy = new URL(config.publicProxyOrigin ?? ""); } catch { return invalid("A fixed public HTTP(S) CONNECT proxy origin is required."); }
+        if (!/^https?:$/u.test(proxy.protocol) || proxy.username || proxy.password || proxy.pathname !== "/" || proxy.search || proxy.hash
+          || proxy.origin !== config.publicProxyOrigin?.replace(/\/$/u, "")) invalid("A fixed public HTTP(S) CONNECT proxy origin is required.");
+      } else if (config.publicProxyOrigin !== undefined) invalid("The HTTP CONNECT proxy origin is available only for tcpmux.");
       const ca = await readCertificateBundle(config.serverCaPool); const caFile = join(directory, "relay-ca.pem");
       await writeFile(caFile, ca, { flag: "wx", mode: 0o600 });
       if (config.mode === "tcp" && config.remotePort === undefined) invalid("A stable public frp TCP port is required.");
-      await save(`serverAddr = ${toml(config.serverAddress)}\nserverPort = ${config.serverPort}\nauth.method = "token"\nauth.token = ${toml(config.token)}\ntransport.tls.enable = true\ntransport.tls.serverName = ${toml(config.serverName)}\ntransport.tls.trustedCaFile = ${toml(caFile)}\nwebServer.addr = "127.0.0.1"\nwebServer.port = 0\nlog.to = "console"\nlog.level = "info"\nloginFailExit = true\n[[proxies]]\nname = ${toml(`linkspan-${options.requestId}`)}\ntype = ${toml(config.mode)}\nlocalIP = "127.0.0.1"\nlocalPort = ${bridge.port}\n${config.mode === "tcp" ? `remotePort = ${port(config.remotePort!)}\n` : `customDomains = [${toml(new URL(origin).hostname)}]\n`}`);
+      await save(`serverAddr = ${toml(config.serverAddress)}\nserverPort = ${config.serverPort}\nauth.method = "token"\nauth.token = ${toml(config.token)}\ntransport.tls.enable = true\ntransport.tls.serverName = ${toml(config.serverName)}\ntransport.tls.trustedCaFile = ${toml(caFile)}\nwebServer.addr = "127.0.0.1"\nwebServer.port = 0\nlog.to = "console"\nlog.level = "info"\nloginFailExit = true\n[[proxies]]\nname = ${toml(`linkspan-${options.requestId}`)}\ntype = ${toml(config.mode)}\nlocalIP = "127.0.0.1"\nlocalPort = ${bridge.port}\n${config.mode === "tcp" ? `remotePort = ${port(config.remotePort!)}\n` : `customDomains = [${toml(new URL(origin).hostname)}]\n`}${config.mode === "tcpmux" ? 'multiplexer = "httpconnect"\n' : ''}`);
       return { args: ["-c", file], expectedOrigin: origin, ready: line => line.includes("start proxy success") ? origin : undefined };
     }
     case "rathole": {
@@ -219,7 +225,8 @@ async function spawnCarrier(config: ConnectorConfig & { readonly helper: Connect
 export async function startHelperConnector(config: ConnectorConfig, options: ConnectorOptions): Promise<Connector> {
   if (!("helper" in config)) invalid("This carrier requires an explicitly prepared helper.");
   const http = (config.provider === "funnel" && config.mode !== "tcp") || config.provider === "zrok" || (config.provider === "frp" && config.mode === "http") || (config.provider === "pangolin" && config.mode === "http") || (config.provider === "netbird" && config.mode === "http");
-  return startWithLifecycle(config, options, http ? "http" : "tls", (bridge, signal) => spawnCarrier(config, { ...options, signal }, bridge));
+  const mode = config.provider === "frp" && config.mode === "tcpmux" ? "stream" : http ? "http" : "tls";
+  return startWithLifecycle(config, options, mode, (bridge, signal) => spawnCarrier(config, { ...options, signal }, bridge));
 }
 
 /** Recovery never adopts a name or kills a PID. Only an exact share receipt

@@ -57,6 +57,15 @@ for (const name of (await readdir(join(root, 'packages'))).sort()) {
     assert.ok(entries.includes(`package/${nativeEntry.slice(2)}`), 'The public native entry must exist inside the fixed package.');
   }
   if (name === 'core') assert.deepEqual(packedManifest.dependencies ?? {}, {});
+  if (name === 'http') {
+    assert.deepEqual(packedManifest.dependencies, { '@jokoagent/linkspan-core': manifest.version });
+    assert.equal(entries.some(entry => /connect-parser|CONNECT_PARSER_LICENSE|http-connect/u.test(entry)), false,
+      'An HTTP-only archive must not contain the separately selected CONNECT backend.');
+  }
+  if (name === 'http-connect') {
+    assert.deepEqual(packedManifest.dependencies, { '@jokoagent/linkspan-core': manifest.version });
+    for (const required of ['connect-parser.js', 'CONNECT_PARSER_LICENSE.txt', 'connect-parser-input.json']) assert.ok(entries.includes(`package/dist/${required}`));
+  }
   if (name === 'noise') {
     assert.deepEqual(packedManifest.dependencies, { '@jokoagent/linkspan-core': manifest.version });
     assert.ok(entries.includes('package/dist/THIRD_PARTY_LICENSES.txt'));
@@ -94,6 +103,18 @@ try {
   assert.deepEqual(Object.keys(tree[0].dependencies), [core.name]);
   assert.deepEqual(tree[0].dependencies[core.name].dependencies ?? {}, {});
   execFileSync(process.execPath, ['--input-type=module', '-e', 'const core = await import("@jokoagent/linkspan-core"); if (typeof core.createOperationScope !== "function") process.exit(1)'], { cwd: consumer, stdio: 'inherit' });
+  const http = packages.find(value => value.name === '@jokoagent/linkspan-http');
+  await writeFile(join(consumer, 'package.json'), JSON.stringify({ private: true, type: 'module', dependencies: { [http.name]: overrides[http.name] } }));
+  execFileSync(packageManager.executable, [...packageManager.args, 'install', '--offline', '--ignore-scripts', '--no-frozen-lockfile'], { cwd: consumer, stdio: 'inherit' });
+  const httpTree = JSON.parse(execFileSync(packageManager.executable, [...packageManager.args, 'list', '--depth', 'Infinity', '--json'], { cwd: consumer, encoding: 'utf8' }));
+  assert.deepEqual(Object.keys(httpTree[0].dependencies), [http.name]);
+  assert.deepEqual(Object.keys(httpTree[0].dependencies[http.name].dependencies ?? {}), [core.name]);
+  assert.deepEqual(httpTree[0].dependencies[http.name].dependencies[core.name].dependencies ?? {}, {});
+  execFileSync(process.execPath, ['--input-type=module', '-e', 'const http = await import("@jokoagent/linkspan-http"); if (typeof http.createHttpFetch !== "function") process.exit(1)'], { cwd: consumer, stdio: 'inherit' });
+  const httpConnect = packages.find(value => value.name === '@jokoagent/linkspan-http-connect');
+  await writeFile(join(consumer, 'package.json'), JSON.stringify({ private: true, type: 'module', dependencies: { [httpConnect.name]: overrides[httpConnect.name] } }));
+  execFileSync(packageManager.executable, [...packageManager.args, 'install', '--offline', '--ignore-scripts', '--no-frozen-lockfile'], { cwd: consumer, stdio: 'inherit' });
+  execFileSync(process.execPath, ['--input-type=module', '-e', 'const portable = await import("@jokoagent/linkspan-http-connect"); const node = await import("@jokoagent/linkspan-http-connect/node"); if (typeof portable.negotiateHttpConnect !== "function" || typeof node.connectHttpConnectStream !== "function" || typeof node.createNodeStreamCarrier !== "function") process.exit(1)'], { cwd: consumer, stdio: 'inherit' });
   const noise = packages.find(value => value.name === '@jokoagent/linkspan-noise');
   await writeFile(join(consumer, 'package.json'), JSON.stringify({ private: true, type: 'module', dependencies: {
     [noise.name]: overrides[noise.name]

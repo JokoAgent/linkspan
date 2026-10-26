@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { request } from 'node:http';
 import { createServer } from 'node:net';
-import { createOriginBridge, startWithLifecycle, reconcileConnectorResource } from '../dist/runtime.js';
+import { createOriginBridge, startWithLifecycle, reconcileConnectorResource, validateOptions } from '../dist/runtime.js';
 import { origin, budget } from './fixtures/origin.mjs';
 import { connectorHelperArtifact } from '../dist/artifacts.js';
 
@@ -26,6 +26,18 @@ test('L7 origin bridge uses fixed CA/SNI even when provider changes Host',async 
 test('origin bridge rejects ambiguous loopback spellings, plaintext and public destinations',async t=>{
   const app=await origin(t);
   for(const value of ['https://127.1:4444','https://2130706433:4444','http://127.0.0.1:4444','https://192.168.1.2:4444','https://169.254.169.254:4444'])await assert.rejects(createOriginBridge({...app.options,localOrigin:value},budget,'http'),{code:'invalid_argument'});
+});
+
+test('only selected tcpmux accepts a literal-loopback Noise target without HTTPS credentials',async()=>{
+  const options={requestId:'raw-noise-owner',encryptedStreamTarget:{address:'127.0.0.1',port:23456}};
+  assert.equal(validateOptions(options,'stream').href,'tcp://127.0.0.1:23456');
+  assert.equal(validateOptions({...options,encryptedStreamTarget:{address:'::1',port:23456}},'stream').hostname,'[::1]');
+  for(const address of ['localhost','127.1','2130706433','192.168.1.2','169.254.169.254'])assert.throws(()=>validateOptions({...options,encryptedStreamTarget:{address,port:23456}},'stream'),{code:'invalid_argument'});
+  assert.throws(()=>validateOptions(options,'tls'),{code:'invalid_argument'});
+  assert.throws(()=>validateOptions({...options,originCaPool:'unexpected.pem'},'stream'),{code:'invalid_argument'});
+  for(const mode of ['http','tls'])assert.throws(()=>validateOptions({requestId:'no-certificate'},mode),{code:'invalid_argument'});
+  await assert.rejects(startWithLifecycle({provider:'localtunnel',budget},options,'stream',()=>assert.fail('An unrelated provider must never acquire a raw target.')),{code:'invalid_argument'});
+  await assert.rejects(startWithLifecycle({provider:'frp',mode:'tcpmux',budget},options,'tls',()=>assert.fail('A tcpmux provider must never acquire an HTTPS target.')),{code:'invalid_argument'});
 });
 test('traffic exhaustion retires the fixed origin bridge instead of buffering unbounded bytes',async t=>{
   const app=await origin(t);

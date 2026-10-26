@@ -38,10 +38,12 @@ export interface CarrierBudget {
 export interface ConnectorOptions extends OperationOptions {
   readonly requestId: string;
   /** A dedicated encrypted-carrier HTTPS listener, never a general host service. */
-  readonly localOrigin: string;
-  readonly originServerName: string;
+  readonly localOrigin?: string;
+  readonly originServerName?: string;
   /** Bounded public certificate PEM file. Private endpoint keys are forbidden. */
-  readonly originCaPool: string;
+  readonly originCaPool?: string;
+  /** Only frp tcpmux may forward to this dedicated raw Noise listener. */
+  readonly encryptedStreamTarget?: { readonly address: "127.0.0.1" | "::1"; readonly port: number };
   readonly startupTimeoutMs?: number;
   /** Persist synchronously in the host's already reserved operation. */
   readonly onResource?: (resource: ConnectorResource) => void;
@@ -109,7 +111,7 @@ export interface SshConfig extends BaseConfig {
 export interface FrpConfig extends BaseConfig {
   readonly provider: "frp";
   readonly helper: ConnectorHelper;
-  readonly mode: "tcp" | "http" | "https";
+  readonly mode: "tcp" | "http" | "https" | "tcpmux";
   readonly serverAddress: string;
   readonly serverPort: number;
   readonly token: string;
@@ -117,6 +119,8 @@ export interface FrpConfig extends BaseConfig {
   readonly serverCaPool: string;
   readonly remotePort?: number;
   readonly publicOrigin: string;
+  /** tcpmux only: independently selected public HTTP(S) CONNECT proxy origin. */
+  readonly publicProxyOrigin?: string;
 }
 export interface RatholeConfig extends BaseConfig {
   readonly provider: "rathole";

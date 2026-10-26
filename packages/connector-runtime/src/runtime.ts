@@ -21,18 +21,27 @@ export function publicOrigin(value: string): string {
 export function validateBudget(budget: CarrierBudget): void {
   if (!budget || typeof budget.paidEnabled !== "boolean" || !Number.isSafeInteger(budget.maximumBytes) || budget.maximumBytes < 1024 || !Number.isSafeInteger(budget.maximumSessionMs) || budget.maximumSessionMs < 1000 || budget.maximumSessionMs > 86_400_000) invalid("Explicit carrier consent and bounded session time/traffic are required.");
 }
-export function validateOptions(options: ConnectorOptions): URL {
+export type OriginBridgeMode = "http" | "tls" | "stream";
+export function validateOptions(options: ConnectorOptions, mode: OriginBridgeMode = "tls"): URL {
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(options.requestId)) invalid("A stable bounded host request identity is required.");
+  if (!Number.isSafeInteger(options.startupTimeoutMs ?? 60_000) || (options.startupTimeoutMs ?? 60_000) < 1000 || (options.startupTimeoutMs ?? 60_000) > 180_000) invalid("The connector startup timeout is outside its supported bounds.");
+  if (mode === "stream") {
+    const target = options.encryptedStreamTarget;
+    if (!target || !["127.0.0.1", "::1"].includes(target.address) || !Number.isInteger(target.port) || target.port < 1 || target.port > 65535
+      || options.localOrigin !== undefined || options.originServerName !== undefined || options.originCaPool !== undefined) invalid("The selected stream carrier requires only a fixed literal-loopback Noise target.");
+    return new URL(`tcp://${target.address === "::1" ? "[::1]" : target.address}:${target.port}`);
+  }
+  if (options.encryptedStreamTarget !== undefined) invalid("A raw encrypted stream target is available only for the selected tcpmux carrier.");
   let url: URL;
+  if (typeof options.localOrigin !== "string") invalid("An encrypted HTTPS loopback carrier is required.");
   try { url = new URL(options.localOrigin); } catch { return invalid("An encrypted HTTPS loopback carrier is required."); }
   if (url.protocol !== "https:" || !["127.0.0.1", "[::1]"].includes(url.hostname) || !url.port || url.username || url.password || url.pathname !== "/" || url.search || url.hash || url.origin !== options.localOrigin.replace(/\/$/u, "")) invalid("An encrypted HTTPS loopback carrier is required.");
   const name = options.originServerName;
   if (typeof name !== "string" || name.length > 253 || (isIP(name) === 0 && !name.split(".").every(label => /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/u.test(label)))) invalid("A fixed origin certificate identity is required.");
-  if (!Number.isSafeInteger(options.startupTimeoutMs ?? 60_000) || (options.startupTimeoutMs ?? 60_000) < 1000 || (options.startupTimeoutMs ?? 60_000) > 180_000) invalid("The connector startup timeout is outside its supported bounds.");
   return url;
 }
-export async function readCertificateBundle(path: string): Promise<string> {
-  if (!isAbsolute(path)) invalid("An absolute public origin CA file is required.");
+export async function readCertificateBundle(path: string | undefined): Promise<string> {
+  if (typeof path !== "string" || !isAbsolute(path)) invalid("An absolute public origin CA file is required.");
   try {
     const info = await lstat(path);
     if (!info.isFile() || info.isSymbolicLink() || info.size < 1 || info.size > 65_536) throw new Error();
@@ -55,11 +64,12 @@ export interface OriginBridge {
 
 /** Fixed-target byte forwarding. L7 carriers receive HTTP and the bridge verifies
  * the host TLS itself. L4 carriers pass the visitor's TLS directly to the host.
+ * Explicit stream mode forwards only to the independently pinned Noise listener.
  * No URL, Host header, SDK request or remote control message selects a target. */
-export async function createOriginBridge(options: ConnectorOptions, budget: CarrierBudget, mode: "http" | "tls"): Promise<OriginBridge> {
-  const origin = validateOptions(options);
+export async function createOriginBridge(options: ConnectorOptions, budget: CarrierBudget, mode: OriginBridgeMode): Promise<OriginBridge> {
+  const origin = validateOptions(options, mode);
   validateBudget(budget);
-  const ca = await readCertificateBundle(options.originCaPool);
+  const ca = mode === "stream" ? undefined : await readCertificateBundle(options.originCaPool);
   const sockets = new Set<Socket>();
   let bytes = 0;
   let exhausted = false;
@@ -84,7 +94,7 @@ export async function createOriginBridge(options: ConnectorOptions, budget: Carr
     track(incoming);
     const connectOptions = { host: origin.hostname.replace(/^\[|\]$/gu, ""), port: Number(origin.port), allowHalfOpen: true };
     const outgoing = mode === "http"
-      ? connectTls({ ...connectOptions, servername: options.originServerName, ca, rejectUnauthorized: true, ALPNProtocols: ["http/1.1"] })
+      ? connectTls({ ...connectOptions, servername: options.originServerName!, ca: ca!, rejectUnauthorized: true, ALPNProtocols: ["http/1.1"] })
       : importSocket(connectOptions);
     track(outgoing);
     outgoing.once(mode === "http" ? "secureConnect" : "connect", () => {
@@ -143,8 +153,9 @@ export async function reconcileConnectorResource(config: ConnectorConfig, resour
 }
 
 /** Owns an SDK result even when cancellation wins while its creation is pending. */
-export async function startWithLifecycle(config: ConnectorConfig, options: ConnectorOptions, mode: "http" | "tls", start: (bridge: OriginBridge, signal: AbortSignal) => Promise<StartedCarrier>): Promise<Connector> {
-  validateBudget(config.budget); validateOptions(options);
+export async function startWithLifecycle(config: ConnectorConfig, options: ConnectorOptions, mode: OriginBridgeMode, start: (bridge: OriginBridge, signal: AbortSignal) => Promise<StartedCarrier>): Promise<Connector> {
+  if ((mode === "stream") !== (config.provider === "frp" && config.mode === "tcpmux")) invalid("Only the selected frp tcpmux carrier may use a raw Noise target.");
+  validateBudget(config.budget); validateOptions(options, mode);
   const expiry = Math.min(options.deadline ?? Infinity, Date.now() + config.budget.maximumSessionMs);
   const lease = createOperationScope({ ...(options.signal === undefined ? {} : { signal: options.signal }), deadline: expiry });
   lease.check();

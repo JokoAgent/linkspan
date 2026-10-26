@@ -11,6 +11,9 @@ importers:
       '@types/node':
         specifier: 24.12.4
         version: 24.12.4
+      http-parser-js:
+        specifier: 0.5.10
+        version: 0.5.10
       playwright-core:
         specifier: 1.60.0
         version: 1.60.0
@@ -65,6 +68,16 @@ importers:
       tar:
         specifier: 7.5.22
         version: 7.5.22
+    devDependencies:
+      '@jokoagent/linkspan-http':
+        specifier: workspace:*
+        version: link:../http
+      '@jokoagent/linkspan-http-connect':
+        specifier: workspace:*
+        version: link:../http-connect
+      '@jokoagent/linkspan-noise':
+        specifier: workspace:*
+        version: link:../noise
 
   packages/core: {}
 
@@ -98,6 +111,19 @@ importers:
       ws:
         specifier: 8.22.0
         version: 8.22.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+
+  packages/http-connect:
+    dependencies:
+      '@jokoagent/linkspan-core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@jokoagent/linkspan-http':
+        specifier: workspace:*
+        version: link:../http
+      '@jokoagent/linkspan-noise':
+        specifier: workspace:*
+        version: link:../noise
 
   packages/iroh:
     dependencies:
@@ -1001,6 +1027,9 @@ packages:
   hasown@2.0.4:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
+
+  http-parser-js@0.5.10:
+    resolution: {integrity: sha512-Pysuw9XpUq5dVc/2SMHpuTY01RFl8fttgcyunjL7eEMhGM3cI4eOmiCycJDVCo/7O7ClfQD3SaI6ftDzqOXYMA==}
 
   https-proxy-agent@5.0.1:
     resolution: {integrity: sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==}
@@ -2152,6 +2181,8 @@ snapshots:
   hasown@2.0.4:
     dependencies:
       function-bind: 1.1.2
+
+  http-parser-js@0.5.10: {}
 
   https-proxy-agent@5.0.1(supports-color@10.2.2):
     dependencies:

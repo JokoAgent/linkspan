@@ -10,6 +10,7 @@ host, RPC schema, device model, database or account service.
 | `@jokoagent/linkspan-core` | ByteChannel, errors and operation lifetimes | No dependencies |
 | `@jokoagent/linkspan-noise` | Pinned Noise over ordinary WebSocket | Core; bundled pure JS security implementation |
 | `@jokoagent/linkspan-http` | Optional concurrent HTTP streams and Fetch adapter | Core; Node bridge is a separate entry |
+| `@jokoagent/linkspan-http-connect` | Optional standard CONNECT carrier for native hosts and public tcpmux endpoints | Core; private fixed parser, separate Node TCP/TLS entry |
 | `@jokoagent/linkspan-cloudflare` | Explicitly prepared, managed server connector | Node-only; no helper downloaded on installation |
 | `@jokoagent/linkspan-connectors` | Public carrier lifecycle, fixed helper preparation, management and separate UDP mappings | Selected provider packages/helpers only; [mode matrix](packages/connectors/README.md) |
 | `@jokoagent/linkspan-connector-runtime` | Bounded fixed-origin runtime shared by selected providers | Core; no vendor SDK |
@@ -55,6 +56,11 @@ const response = await secureFetch('https://your-published-endpoint.example/api'
 Browser hosts should import the security/HTTP modules when the user selects a
 connection path. Configuration presentation must not initialize a connector or
 preload unused backends. Ordinary WSS clients do not install Cloudflare's helper.
+HTTP CONNECT is an explicit native/Node carrier: authenticate the inner stream
+with Noise and the full endpoint pin before using the HTTP adapter. Embedded
+hosts supply native TCP; ordinary browsers cannot issue CONNECT through Fetch.
+The independently selected [CONNECT package](packages/http-connect/README.md)
+does not add a parser or native dependency to HTTP-only installations.
 React Native hosts provide secure `crypto.getRandomValues`, TextEncoder/Decoder,
 WebSocket and Web ReadableStream primitives before loading the module. The HTTP
 Fetch adapter streams bytes without passing them through RN's buffering Request

@@ -1,0 +1,19 @@
+{
+  "name": "@jokoagent/linkspan-http-connect",
+  "version": "0.1.0",
+  "type": "module",
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./node": { "types": "./dist/node.d.ts", "default": "./dist/node.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/build-connect-parser.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*" },
+  "devDependencies": {
+    "@jokoagent/linkspan-http": "workspace:*",
+    "@jokoagent/linkspan-noise": "workspace:*"
+  }
+}

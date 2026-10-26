@@ -4,12 +4,22 @@ This package starts only the provider selected by the host. Importing the
 package, reading `CONNECTOR_LIMITS`, and validating configuration do not install
 or start a helper. Official SDK adapters are separate optional packages.
 
-`startConnector(config, options)` takes a dedicated loopback HTTPS carrier,
+`startConnector(config, options)` normally takes a dedicated loopback HTTPS carrier,
 `originCaPool` containing public CA certificates, a fixed `originServerName`, a
 stable host operation `requestId`, cancellation/deadline, and synchronous
 `onResource`. It returns `publicOrigin`, the owned `resource`, `closed`, and
 `close()`. The host performs application authentication, endpoint-key checking,
 encrypted application transport, permissions, and file/media ownership.
+
+Only frp `mode: "tcpmux"` instead requires
+`encryptedStreamTarget: {address: "127.0.0.1" | "::1", port}` and omits all three
+HTTPS origin/CA/SNI fields. This target is a dedicated raw Noise listener, never
+a plaintext HTTP handler. Other modes reject a raw target and retain the HTTPS
+requirements. The logical `publicOrigin` supplies the selected domain and
+explicit `host:port` CONNECT authority (443 when the HTTPS port is omitted).
+`publicProxyOrigin` selects the independent canonical HTTP(S) CONNECT frontend.
+Hosts retain both as typed connection material; they must not dial the logical
+origin directly or treat CONNECT 200 as endpoint authentication.
 
 Every configuration requires `budget: {paidEnabled, maximumSessionMs,
 maximumBytes}`. The local bridge counts both directions and retires the session
@@ -21,6 +31,11 @@ that a provider's quota is unlimited. Known paid ngrok TLS endpoints require
 
 HTTP carriers forward to a private HTTP bridge which verifies the fixed host
 HTTPS origin CA/SNI. TCP/TLS carriers forward the visitor's host TLS bytes.
+The explicitly selected tcpmux bridge forwards raw Noise only to its fixed
+literal-loopback target. Its client uses the independent optional
+`@jokoagent/linkspan-http-connect` package before verifying the complete endpoint
+public key with Noise. The same budget, resource journal and cancellation own
+the helper, bridge and original target sockets.
 Neither request Host/URL, supplier messages, environment variables nor an
 SDK-refreshed port list can choose a different local destination. Visitor
 SSO/PIN/password/header authentication is not enabled by these adapters.
@@ -41,6 +56,7 @@ availability, regional quotas, throughput, device behavior, or account access.
 | frp public TCP | `src/helpers.ts`, frpc v0.71.1 | Actual client/server TLS transport and host TLS relay test | Existing frps operator, public TCP port and certificate |
 | frp public HTTP vhost | Same, `mode: "http"` | Actual vhost relay to the fixed CA/SNI-verified host HTTPS bridge | Existing public HTTPS frontend terminating outer TLS before frps HTTP vhost; application Noise is still required |
 | frp public HTTPS | Same, `mode: "https"` | Actual SNI HTTPS-vhost client/server relay test | Existing frps HTTPS vhost/domain, certificate |
+| frp public tcpmux / HTTP CONNECT | Same, `mode: "tcpmux"`, `multiplexer: "httpconnect"`; optional `linkspan-http-connect` client | Actual fixed frps/frpc CONNECT→pinned Noise→HTTP, 4 MiB upload/download hashes, wrong pin before business, original-owner cancellation/cleanup | Existing frps `tcpmuxHTTPConnectPort`, **`tcpmuxPassthrough=false`**, selected domain; HTTP or system-trusted HTTPS proxy frontend. Embedded Node/Desktop/Service/Mobile raw socket binding; ordinary Web Fetch cannot CONNECT |
 | frp public UDP mapping | `src/datagram.ts`, same fixed frpc | Actual authenticated client/server UDP relay, binary packet bounds and owned cleanup | Existing frps UDP port; matching client/server `udpPacketSize`; same-host authorized native media target |
 | rathole TCP over Noise | Same, rathole v0.5.0 | Actual local relay, fixed Noise key, host TLS test | Existing server/service/token and reachable public listener |
 | rathole TCP over TLS | Same, explicit CA/relay hostname | Actual verified connector TLS and host TLS test | Existing server certificate/PKCS12 identity and public listener |
@@ -89,6 +105,7 @@ applications, not extra Linkspan modes.
 
 Official mode evidence: [frp TCP/UDP](https://gofrp.org/en/docs/features/tcp-udp/),
 [frp vhosts](https://gofrp.org/en/docs/features/http-https/),
+[frp tcpmux / HTTP CONNECT](https://github.com/fatedier/frp/blob/v0.71.1/README.md#tcp-port-multiplexing),
 [rathole v0.5.0 service type](https://github.com/rathole-org/rathole/tree/v0.5.0),
 [Pinggy tunnel types](https://pinggy.io/docs/usages/),
 [Pinggy SDK and Pro TLSTCP](https://pinggy-io.github.io/sdk-nodejs/),
@@ -185,7 +202,7 @@ capped locally at 60 minutes; no subscription or persistent reservation is bough
 ## Checks
 
 `pnpm test` runs account-free runtime, UDP, resource and lifecycle tests.
-`LINKSPAN_HELPER_RELEASE_TESTS=1` additionally runs all nine actual local relay
+`LINKSPAN_HELPER_RELEASE_TESTS=1` additionally runs all ten actual local relay
 cases in `test/helper-relays.test.mjs`; those are explicitly skipped otherwise.
 Go tests for common/Funnel/NetBird verify fixed targets, packet behavior and safe
 embedded state. Pangolin and zrok preparation also runs their restricted-source
