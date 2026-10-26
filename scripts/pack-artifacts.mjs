@@ -62,6 +62,12 @@ for (const name of (await readdir(join(root, 'packages'))).sort()) {
     assert.ok(entries.includes('package/dist/THIRD_PARTY_LICENSES.txt'));
     assert.ok(entries.includes('package/dist/dependency-inventory.json'));
   }
+  if (name === 'webrtc-node') {
+    assert.equal(packedManifest.dependencies?.werift, undefined);
+    assert.ok(entries.includes('package/dist/THIRD_PARTY_LICENSES.txt'));
+    assert.ok(entries.includes('package/dist/dependency-inventory.json'));
+    assert.ok(entries.includes('package/dist/upstream-patches.json'));
+  }
   if (name === 'cloudflare') {
     for (const required of ['LICENSE.cloudflared', 'UPSTREAM.md', 'THIRD_PARTY_NOTICES.cloudflared.md', 'cloudflared.build-inputs.json',
       'cloudflared-restricted.patch', 'scripts/build-restricted-helper.mjs', 'scripts/restricted-http2-test.go', 'scripts/restricted-origin-test.go', 'scripts/restricted-tls-test.go', 'dist/turn.js', 'dist/turn.d.ts']) assert.ok(entries.includes(`package/${required}`));
@@ -70,7 +76,7 @@ for (const name of (await readdir(join(root, 'packages'))).sort()) {
   const bytes = await readFile(join(destination, filename));
   packages.push({ name: manifest.name, version: manifest.version, file: filename, bytes: bytes.length,
     sha256: createHash('sha256').update(bytes).digest('hex'), integrity: `sha512-${createHash('sha512').update(bytes).digest('base64')}`,
-    runtime: name.endsWith('-wasm') ? 'browser' : name === 'iroh-services' ? 'server-wasm' : name.endsWith('-node') ? 'node-builder' : 'portable' });
+    runtime: name.endsWith('-wasm') ? 'browser' : name === 'iroh-services' ? 'server-wasm' : name === 'webrtc-node' ? 'node' : name.endsWith('-node') ? 'node-builder' : 'portable' });
 }
 await writeFile(join(destination, 'manifest.json'), JSON.stringify({ sourceRepository: 'https://github.com/JokoAgent/linkspan', sourceCommit, sourceTree, packages }, null, 2) + '\n');
 // Verify the actual installation tree as well as the package manifest: a core
@@ -94,5 +100,11 @@ try {
   } }));
   execFileSync(packageManager.executable, [...packageManager.args, 'install', '--offline', '--ignore-scripts', '--no-frozen-lockfile'], { cwd: consumer, stdio: 'inherit' });
   execFileSync(process.execPath, ['--input-type=module', '-e', 'const noise = await import("@jokoagent/linkspan-noise"); if (typeof noise.connectWebSocket !== "function" || typeof noise.connectStream !== "function") process.exit(1)'], { cwd: consumer, stdio: 'inherit' });
+  const rtc = packages.find(value => value.name === '@jokoagent/linkspan-webrtc-node');
+  await writeFile(join(consumer, 'package.json'), JSON.stringify({ private: true, type: 'module', dependencies: {
+    [rtc.name]: overrides[rtc.name]
+  } }));
+  execFileSync(packageManager.executable, [...packageManager.args, 'install', '--offline', '--ignore-scripts', '--no-frozen-lockfile'], { cwd: consumer, stdio: 'inherit' });
+  execFileSync(process.execPath, ['--input-type=module', '-e', 'const {createNodeWebRtcPeer}=await import("@jokoagent/linkspan-webrtc-node"); const peer=createNodeWebRtcPeer({iceServers:[]}); try { peer.createDataChannel("consumer-probe"); const offer=await peer.createOffer(); if (offer.type!=="offer" || !offer.sdp.includes("a=fingerprint:sha-256")) process.exitCode=1; } finally { await peer.close(); }'], { cwd: consumer, stdio: 'inherit' });
 } finally { await rm(consumer, { recursive: true, force: true }); }
 console.log(`Packed ${packages.length} independently consumable packages from ${sourceCommit} into ${destination}.`);

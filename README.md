@@ -21,6 +21,7 @@ host, RPC schema, device model, database or account service.
 | `@jokoagent/linkspan-tailcat-runtime` | Shared private tailcat address/key validation | Core; no vendor runtime |
 | `@jokoagent/linkspan-turn` | Explicit Twilio Token and coturn REST issuance and TTL retirement | Server-only signing; original host media authority required |
 | `@jokoagent/linkspan-webrtc` | Bounded reliable ordered RTC data channels with trusted DTLS pinning | Existing platform RTC engine; no unrelated SDK |
+| `@jokoagent/linkspan-webrtc-node` | Explicitly selected Node WebRTC engine | werift 0.25.2; no WASM/native binary or other backend |
 
 The initial security implementation is `@libp2p/noise@17.0.7`, using its
 Noise XX handshake, signed Ed25519 identity and ChaCha20-Poly1305 transport.

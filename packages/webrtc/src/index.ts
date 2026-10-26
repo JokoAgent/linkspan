@@ -61,6 +61,8 @@ class RtcByteChannel implements ByteChannel {
   #receivedBytes = 0;
   #sending = false;
   #receiving = false;
+  #closing = false;
+  #closePromise: Promise<void> | undefined;
   #ended = false;
   #error: LinkspanError | undefined;
   #wake: (() => void) | undefined;
@@ -118,14 +120,45 @@ class RtcByteChannel implements ByteChannel {
     this.#finish(asLinkspanError(reason));
     this.options.dataChannel.close(); if (this.options.ownsPeerConnection) this.options.peerConnection.close();
   }
-  async close(): Promise<void> {
-    this.#finish(); this.options.dataChannel.close();
-    if (this.options.ownsPeerConnection) this.options.peerConnection.close();
+  close(): Promise<void> {
+    this.#closePromise ??= this.#gracefulClose();
+    return this.#closePromise;
+  }
+  async #gracefulClose(): Promise<void> {
+    this.#closing = true;
+    const data = this.options.dataChannel;
+    const scope = createOperationScope({ ...(this.options.signal === undefined ? {} : { signal: this.options.signal }), deadline: Date.now() + 10000 });
+    try {
+      // Closing the peer immediately after enqueueing the last record can
+      // discard SCTP bytes. Drain, then let the stream reset finish first.
+      data.bufferedAmountLowThreshold = 0;
+      while (!this.#ended && data.bufferedAmount > 0) {
+        let wake!: () => void;
+        const pending = new Promise<void>(resolve => { wake = resolve; });
+        data.addEventListener("bufferedamountlow", wake, { once: true });
+        data.addEventListener("close", wake, { once: true });
+        try { await scope.wait(pending); }
+        finally { data.removeEventListener("bufferedamountlow", wake); data.removeEventListener("close", wake); }
+      }
+      if (this.#error !== undefined) throw this.#error;
+      if (!this.#ended) {
+        let closed!: () => void;
+        const pending = new Promise<void>(resolve => { closed = resolve; });
+        data.addEventListener("close", closed, { once: true });
+        try { data.close(); await scope.wait(pending); }
+        finally { data.removeEventListener("close", closed); }
+      }
+      this.#finish();
+    } catch (error) { this.abort(error); throw asLinkspanError(error); }
+    finally {
+      scope.dispose();
+      if (this.options.ownsPeerConnection) await this.options.peerConnection.close();
+    }
   }
   async send(bytes: Uint8Array, options: OperationOptions = {}): Promise<void> {
     if (!(bytes instanceof Uint8Array) || bytes.byteLength > this.#maximumMessage) throw new LinkspanError("invalid_argument", "The WebRTC message exceeds the configured bound.");
     if (this.#sending) throw new LinkspanError("protocol_error", "Only one WebRTC send may be pending.");
-    if (this.#ended) throw this.#error ?? new LinkspanError("closed", "The WebRTC channel is closed.");
+    if (this.#ended || this.#closing) throw this.#error ?? new LinkspanError("closed", "The WebRTC channel is closed.");
     this.#sending = true;
     const scope = createOperationScope({ ...options, signal: options.signal === undefined ? this.#shutdown.signal : AbortSignal.any([options.signal, this.#shutdown.signal]) });
     try {

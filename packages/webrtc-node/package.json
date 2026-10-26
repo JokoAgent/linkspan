@@ -1,0 +1,12 @@
+{
+  "name": "@jokoagent/linkspan-webrtc-node",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Independently selected Node WebRTC engine for pinned Linkspan data channels",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist", "README.md", "THIRD_PARTY_NOTICES.werift.txt"],
+  "sideEffects": false,
+  "scripts": { "build": "node build.mjs", "test": "node --test --test-reporter=tap test/*.test.mjs" },
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*", "@jokoagent/linkspan-webrtc": "workspace:*" },
+  "devDependencies": { "esbuild": "0.28.2", "werift": "0.25.2" }
+}

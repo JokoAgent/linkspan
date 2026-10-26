@@ -94,6 +94,16 @@ jobs:
         env:
           LINKSPAN_BROWSER_DRIVER: ${{ github.workspace }}/node_modules/playwright-core/index.mjs
         run: node packages/webrtc/test/browser-check.mjs
+      - name: Verify the selected Node engine against real browser DTLS
+        if: runner.os == 'Linux'
+        env:
+          LINKSPAN_BROWSER_DRIVER: ${{ github.workspace }}/node_modules/playwright-core/index.mjs
+        run: node packages/webrtc-node/test/browser-check.mjs
+      - name: Verify real browser HTTP closure, slow consumers and cancellation
+        if: runner.os == 'Linux'
+        env:
+          LINKSPAN_BROWSER_DRIVER: ${{ github.workspace }}/node_modules/playwright-core/index.mjs
+        run: node packages/webrtc-node/test/http-browser-check.mjs
       - name: Verify actual browser SDK bindings and unselected backend requests
         if: runner.os == 'Linux'
         run: node packages/iroh/test/browser-runtime-check.mjs
