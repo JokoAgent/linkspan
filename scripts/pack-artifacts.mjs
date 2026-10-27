@@ -77,6 +77,10 @@ for (const name of (await readdir(join(root, 'packages'))).sort()) {
     assert.ok(entries.includes('package/dist/dependency-inventory.json'));
     assert.ok(entries.includes('package/dist/upstream-patches.json'));
   }
+  if (name === 'localtunnel') {
+    assert.equal(packedManifest.dependencies?.localtunnel, undefined);
+    for (const required of ['client.cjs', 'THIRD_PARTY_LICENSES.txt', 'dependency-inventory.json', 'upstream-patches.json']) assert.ok(entries.includes(`package/dist/${required}`));
+  }
   if (name === 'cloudflare') {
     for (const required of ['LICENSE.cloudflared', 'UPSTREAM.md', 'THIRD_PARTY_NOTICES.cloudflared.md', 'cloudflared.build-inputs.json',
       'cloudflared-restricted.patch', 'scripts/build-restricted-helper.mjs', 'scripts/restricted-http2-test.go', 'scripts/restricted-origin-test.go', 'scripts/restricted-tls-test.go', 'dist/turn.js', 'dist/turn.d.ts']) assert.ok(entries.includes(`package/${required}`));

@@ -60,3 +60,20 @@ test('reconciliation cannot kill an unrelated live PID or accept another operati
   assert.deepEqual(await reconcileConnectorResource(config,resource,{requestId:'original'}),{state:'outcome_unknown'});
   await assert.rejects(reconcileConnectorResource(config,resource,{requestId:'replacement'}),{code:'invalid_argument'});
 });
+
+for (const trigger of ['close', 'disconnect']) test(`failed ${trigger} cleanup retains its original carrier for reconciliation`, async t => {
+  const app = await origin(t); let attempts = 0, end, fail;
+  const closed = new Promise((resolve, reject) => { end = resolve; fail = reject; });
+  const config = { provider: 'localtunnel', budget };
+  const carrier = await startWithLifecycle(config, app.options, 'http', async () => ({ publicOrigin: 'https://carrier.example',
+    resource: { provider: 'localtunnel', requestId: app.options.requestId, id: `retry-${trigger}`, createdByHost: true }, closed,
+    async close() { if (++attempts === 1) throw new Error('provider-private-credential'); end(); } }));
+  const sanitized = error => { assert.equal(error.code, 'outcome_unknown'); assert.equal(error.outcome, 'unknown'); assert.equal(String(error).includes('provider-private-credential'), false); return true; };
+  if (trigger === 'close') await assert.rejects(carrier.close(), sanitized);
+  else { fail(new Error('disconnected')); await assert.rejects(carrier.closed, sanitized); }
+  assert.equal(attempts, 1);
+  assert.deepEqual(await reconcileConnectorResource(config, carrier.resource, { requestId: app.options.requestId }), { state: 'retired' });
+  assert.equal(attempts, 2);
+  await carrier.close();
+  assert.equal(attempts, 2);
+});

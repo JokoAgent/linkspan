@@ -176,6 +176,10 @@ importers:
       '@jokoagent/linkspan-core':
         specifier: workspace:*
         version: link:../core
+    devDependencies:
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       localtunnel:
         specifier: 2.0.2
         version: 2.0.2(supports-color@10.2.2)

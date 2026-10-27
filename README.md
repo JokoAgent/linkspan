@@ -7,28 +7,19 @@ host, RPC schema, device model, database or account service.
 
 | Package | Purpose | Runtime installation |
 | --- | --- | --- |
-| `@jokoagent/linkspan-core` | ByteChannel, errors and operation lifetimes | No dependencies |
-| `@jokoagent/linkspan-noise` | Pinned Noise over ordinary WebSocket | Core; bundled pure JS security implementation |
-| `@jokoagent/linkspan-http` | Optional concurrent HTTP streams and Fetch adapter | Core; Node bridge is a separate entry |
-| `@jokoagent/linkspan-http-connect` | Optional standard CONNECT carrier for native hosts and public tcpmux endpoints | Core; private fixed parser, separate Node TCP/TLS entry |
-| `@jokoagent/linkspan-cloudflare` | Explicitly prepared, managed server connector | Node-only; no helper downloaded on installation |
-| `@jokoagent/linkspan-connectors` | Public carrier lifecycle, fixed helper preparation, management and separate UDP mappings | Selected provider packages/helpers only; [mode matrix](packages/connectors/README.md) |
-| `@jokoagent/linkspan-connector-runtime` | Bounded fixed-origin runtime shared by selected providers | Core; no vendor SDK |
-| `@jokoagent/linkspan-ngrok`, `-ssh`, `-pinggy`, `-dev-tunnels`, `-localtunnel` | Independently selected SDK carriers | Only the chosen SDK and its documented upstream dependencies |
-| `@jokoagent/linkspan-iroh`, `-tailcat` | Pinned peer streams using the same authenticated Noise channel | Optional Node or browser/native binding |
-| `@jokoagent/linkspan-iroh-node`, `-tailcat-node` | Selected-target native runtime preparation | Build-time preparation; no default native payload in source archives |
-| `@jokoagent/linkspan-iroh-wasm`, `-tailcat-wasm` | Browser and trusted Mobile bridge runtimes | Separate real WASM resources, loaded only when selected |
-| `@jokoagent/linkspan-iroh-services` | Short-lived relay-use capabilities for exact peer identities | Host-only private signing secret; separate small WASM signer |
-| `@jokoagent/linkspan-tailcat-runtime` | Shared private tailcat address/key validation | Core; no vendor runtime |
-| `@jokoagent/linkspan-turn` | Explicit Twilio Token and coturn REST issuance and TTL retirement | Server-only signing; original host media authority required |
-| `@jokoagent/linkspan-webrtc` | Bounded reliable ordered RTC data channels with trusted DTLS pinning | Existing platform RTC engine; no unrelated SDK |
-| `@jokoagent/linkspan-webrtc-node` | Explicitly selected Node WebRTC engine | werift 0.25.2; no WASM/native binary or other backend |
+| [core](packages/core/README.md) | ByteChannel, errors and operation lifetimes | No dependencies |
+| [noise](packages/noise/README.md) | Pinned Noise over WebSocket or a byte stream | Core; bundled pure JS security implementation |
+| [http](packages/http/README.md) | Concurrent HTTP streams and Fetch adapter | Core; separate Node bridge entry |
+| [http-connect](packages/http-connect/README.md) | Native/Node CONNECT carrier and public tcpmux endpoints | Core; private fixed parser and separate TCP/TLS entry |
+| [connectors](packages/connectors/README.md), [connector-runtime](packages/connector-runtime/README.md) | Public TCP/UDP carriers, budgets and resource management | Selected helper or optional ngrok/SSH/Pinggy/Dev Tunnels/localtunnel package |
+| [cloudflare](packages/cloudflare/README.md) | Restricted managed helper, named resources and TURN | Node-only; explicit build preparation |
+| [iroh](packages/iroh/README.md), [tailcat](packages/tailcat/README.md) | Pinned peer streams | Selected Node, native or WASM binding; separate relay capability signer |
+| [webrtc](packages/webrtc/README.md), [webrtc-node](packages/webrtc-node/README.md) | Reliable ordered RTC channels with trusted DTLS pinning | Platform engine or explicitly selected private Node engine |
+| [turn](packages/turn/README.md) | Twilio/coturn issuance and TTL retirement | Server-only; original host media authority required |
 
-The initial security implementation is `@libp2p/noise@17.0.7`, using its
-Noise XX handshake, signed Ed25519 identity and ChaCha20-Poly1305 transport.
-The upstream browser implementation is bundled for Node, Web and React Native;
-it contains no native binary or WASM. Upstream dependencies and their licenses
-are pinned and included in the security package. The host supplies a full
+The [Noise package](packages/noise/README.md) documents the fixed security
+implementation, runtime primitives and included dependency notices.
+The host supplies a full
 `ed25519:<64 lowercase hex digits>` public key obtained through a trusted channel.
 Missing or conflicting trust is an error. No application data is sent before
 verification. A carrier's certificate, DNS name or self-reported identity does
@@ -59,14 +50,9 @@ preload unused backends. Ordinary WSS clients do not install Cloudflare's helper
 HTTP CONNECT is an explicit native/Node carrier: authenticate the inner stream
 with Noise and the full endpoint pin before using the HTTP adapter. Embedded
 hosts supply native TCP; ordinary browsers cannot issue CONNECT through Fetch.
-The independently selected [CONNECT package](packages/http-connect/README.md)
-does not add a parser or native dependency to HTTP-only installations.
-React Native hosts provide secure `crypto.getRandomValues`, TextEncoder/Decoder,
-WebSocket and Web ReadableStream primitives before loading the module. The HTTP
-Fetch adapter streams bytes without passing them through RN's buffering Request
-polyfill. Its RN response facade supports streams and single-consumer byte/text/
-JSON/blob reads; multipart parsing and cloning use a streaming native Response
-where that runtime supplies one. Hosts must enforce their own content budgets.
+The [HTTP adapter](packages/http/README.md) documents React Native streaming
+and response support. Hosts supply the required runtime primitives and content
+budgets; HTTP-only installations do not load the CONNECT parser or native SDKs.
 
 Deploy the server connector against a dedicated encrypted listener. Never point
 it at an application's unencrypted API or file server. The server HTTP bridge
@@ -74,12 +60,11 @@ accepts only a fixed loopback target and keeps business permissions with the
 host. Media uses the host's authenticated signaling and media engine; WSS is not
 TURN. Full network routing, TUN and network-member management are external.
 
-Cloudflare Quick Tunnels are an account-free reference carrier intended for
-testing and development: temporary names, 200 in-flight requests, no SLA and no
-SSE. This implementation carries streams over WSS. It does not request paid
-resources or add a supplier login for clients. Managed helper preparation verifies
-the exact OS/CPU artifact before packaging; runtime never downloads or updates
-it. Supported helper targets and exact inputs are in the connector package.
+Provider modes, account requirements and local budgets are maintained in the
+[carrier matrix](packages/connectors/README.md). Cloudflare Quick is a development
+carrier; helper targets, restrictions and fixed build inputs belong to the
+[Cloudflare package](packages/cloudflare/README.md). Runtime never downloads or
+updates helpers.
 
 An untrusted relay can block traffic and observe connection metadata. Client
 HTML, JavaScript, native code and updates must themselves be loaded from a trusted
@@ -87,19 +72,13 @@ source. A first Web page served by the adversarial relay cannot establish this
 trust from its own script or SRI. Key replacement and lost-key recovery require a
 host-authorized trusted channel. Linkspan does not decide whom a host should trust.
 
-Hosted TURN is available through the server-only
-`@jokoagent/linkspan-cloudflare/turn` entry. The host supplies a limited token
-reader and an already recorded operation ID. Issuance returns generic ICE
-material, expiry and an exact private revocation handle; it never receives a
-host user, device, media permission or business bearer. Unknown issuance is
-reported without retry. The host rechecks media authority and owns recovery.
+TURN issuance returns ICE material, expiry and an exact private revocation
+handle. Hosts record the operation before issuance, recheck media authority and
+recover unknown results without creating another resource. Cloudflare TURN uses
+the separate server-only `@jokoagent/linkspan-cloudflare/turn` entry.
 
-The selected Cloudflare helper is a fixed source build with a minimal patch
-rejecting platform ingress replacement, arbitrary TCP targets and internal
-management routes. Only HTTP/WSS is enabled. Build preparation requires Git and
-Go 1.27.3; startup verifies the restricted binary and never downloads code.
-
-Build independently with Node 24.16+ and pnpm 11.22:
+Use the toolchains pinned in [package.json](package.json) and the
+[six-platform workflow](.github/workflows/ci.yml):
 
 ```sh
 pnpm install --frozen-lockfile

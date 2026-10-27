@@ -170,12 +170,16 @@ export async function startWithLifecycle(config: ConnectorConfig, options: Conne
   const close = (): Promise<void> => {
     stopped = true;
     shutdown.abort();
-    closePromise ??= (async () => {
+    if (closePromise) return closePromise;
+    const pending = (async () => {
       lease.dispose(); lease.signal.removeEventListener("abort", onAbort);
       await bridge.close();
       if (carrier) await boundedClose(() => carrier!.close());
+      if (carrier && liveCarriers.get(resourceKey(carrier.resource))?.close === close) liveCarriers.delete(resourceKey(carrier.resource));
     })();
-    return closePromise;
+    closePromise = pending;
+    void pending.catch(() => { if (closePromise === pending) closePromise = undefined; });
+    return pending;
   };
   const onAbort = (): void => { void close().catch(() => {}); };
   lease.signal.addEventListener("abort", onAbort, { once: true });
@@ -195,7 +199,7 @@ export async function startWithLifecycle(config: ConnectorConfig, options: Conne
     const receipt = options.onResource?.(resource) as unknown;
     if (receipt !== null && typeof receipt === "object" && "then" in receipt) { void Promise.resolve(receipt).catch(() => {}); throw new Error(); }
     liveCarriers.set(resourceKey(resource), { resource, close });
-    const closed = carrier.closed.then(async () => { const wasStopped = stopped; await close(); return { reason: wasStopped ? "stopped" as const : "exited" as const }; }, async () => { await close(); return { reason: "exited" as const, error: "The carrier disconnected." }; }).finally(() => liveCarriers.delete(resourceKey(resource)));
+    const closed = carrier.closed.then(async () => { const wasStopped = stopped; await close(); return { reason: wasStopped ? "stopped" as const : "exited" as const }; }, async () => { await close(); return { reason: "exited" as const, error: "The carrier disconnected." }; });
     void closed.catch(() => {});
     return Object.freeze({ kind: config.provider, requestId: options.requestId, publicOrigin: origin, resource, limits: CONNECTOR_LIMITS[config.provider], closed, close });
   } catch (error) {
@@ -209,5 +213,6 @@ export async function startWithLifecycle(config: ConnectorConfig, options: Conne
 export async function boundedClose(close: () => Promise<void>): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try { await Promise.race([close(), new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new LinkspanError("outcome_unknown", "Carrier cleanup did not confirm within its bound.", { outcome: "unknown" })), 10_000); })]); }
+  catch { throw new LinkspanError("outcome_unknown", "Carrier cleanup is unconfirmed; reconcile the original owned resource before replacement.", { outcome: "unknown" }); }
   finally { if (timer) clearTimeout(timer); }
 }

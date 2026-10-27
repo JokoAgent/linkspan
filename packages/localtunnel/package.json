@@ -3,7 +3,8 @@
   "description": "Experimental public localtunnel carrier for Linkspan",
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
   "files": ["dist", "README.md"],
-  "scripts": { "build": "tsc -p tsconfig.json", "test": "node --test test/*.test.mjs" },
+  "scripts": { "build": "node build.mjs", "test": "node --test test/*.test.mjs" },
   "engines": { "node": ">=24.16.0" },
-  "dependencies": { "@jokoagent/linkspan-core": "workspace:*", "@jokoagent/linkspan-connector-runtime": "workspace:*", "localtunnel": "2.0.2" }
+  "dependencies": { "@jokoagent/linkspan-core": "workspace:*", "@jokoagent/linkspan-connector-runtime": "workspace:*" },
+  "devDependencies": { "esbuild": "0.28.2", "localtunnel": "2.0.2" }
 }

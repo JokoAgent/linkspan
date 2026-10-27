@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { connect, type Socket } from "node:net";
 import type { EventEmitter } from "node:events";
+import { createOperationScope } from "@jokoagent/linkspan-core";
 import type { Connector, ConnectorOptions, PinggyConfig } from "@jokoagent/linkspan-connector-runtime";
 import { invalid, publicOrigin, startWithLifecycle } from "@jokoagent/linkspan-connector-runtime/runtime";
 import { pinggyByteMode } from "./sdk.js";
@@ -24,30 +25,37 @@ export async function startSsh(config: PinggyConfig, options: ConnectorOptions):
   if (config.mode !== "http" && !config.publicOrigin) invalid("A certificate-matching public origin is required for TLS/TCP passthrough.");
   const mode = pinggyByteMode(config);
   const bounded = config.budget.paidEnabled ? config : { ...config, budget: { ...config.budget, maximumSessionMs: Math.min(config.budget.maximumSessionMs, 3_600_000) } };
-  return startWithLifecycle(bounded, options, mode.bridge, async bridge => {
+  return startWithLifecycle(bounded, options, mode.bridge, async (bridge, signal) => {
     const name = "ssh2"; const sdk = await import(name) as { Client: new () => Client };
+    signal.throwIfAborted();
     const client = new sdk.Client(); const streams = new Set<Socket>();
-    let resolveClosed!: () => void; let rejectClosed!: () => void;
-    const closed = new Promise<void>((resolve, reject) => { resolveClosed = resolve; rejectClosed = () => reject(new Error("The Pinggy SSH carrier disconnected.")); });
-    void closed.catch(() => {}); client.once("close", resolveClosed); client.on("error", rejectClosed);
+    let resolveClosed!: () => void;
+    const closed = new Promise<void>(resolve => { resolveClosed = resolve; });
+    const terminate = (): void => { for (const stream of streams) stream.destroy(); client.destroy(); };
+    signal.addEventListener("abort", terminate, { once: true });
+    client.once("close", () => { signal.removeEventListener("abort", terminate); resolveClosed(); });
+    client.on("error", () => {});
     client.on("tcp connection", (_info: unknown, accept: () => Socket, reject: () => void) => {
-      if (streams.size >= 32) { reject(); return; }
+      if (signal.aborted || streams.size >= 32) { reject(); return; }
       const remote = accept(); const local = connect(bridge.port, bridge.host); streams.add(remote); streams.add(local);
       remote.on("error", () => local.destroy()); local.on("error", () => remote.destroy());
       remote.once("close", () => { streams.delete(remote); local.destroy(); }); local.once("close", () => { streams.delete(local); remote.destroy(); });
       remote.pipe(local); local.pipe(remote);
     });
+    const startup = createOperationScope({ signal });
     try {
-      await new Promise<void>((resolve, reject) => {
+      await startup.wait(new Promise<void>((resolve, reject) => {
         client.once("ready", resolve); client.once("error", () => reject(new Error("The pinned Pinggy SSH service could not be authenticated.")));
         client.connect({ host: server, port: 443, username: `${config.token === undefined ? "" : config.token + "+"}${config.mode}`, authHandler: ["none"],
           hostVerifier(key: Buffer) { const actual = Buffer.from(createHash("sha256").update(key).digest("base64").replace(/=+$/u, "")); const expected = Buffer.from(fingerprint.replace(/^SHA256:/u, "").replace(/=+$/u, "")); return actual.length === expected.length && timingSafeEqual(actual, expected); },
           readyTimeout: options.startupTimeoutMs ?? 60_000, keepaliveInterval: 15_000, keepaliveCountMax: 3, agentForward: false });
-      });
-      await new Promise<void>((resolve, reject) => client.forwardIn("", 0, error => error ? reject(new Error("The Pinggy listener was rejected.")) : resolve()));
-      const origin = await new Promise<string>((resolve, reject) => {
+      }));
+      await startup.wait(new Promise<void>((resolve, reject) => client.forwardIn("", 0, error => error ? reject(new Error("The Pinggy listener was rejected.")) : resolve())));
+      const origin = await startup.wait(new Promise<string>((resolve, reject) => {
         client.exec(config.mode === "http" ? "x:https" : "", (error, stream) => {
           if (error) { reject(new Error("The Pinggy carrier setup failed.")); return; }
+          if (signal.aborted) { stream.destroy(); reject(signal.reason); return; }
+          streams.add(stream); stream.once("close", () => streams.delete(stream));
           stream.on("error", () => reject(new Error("The Pinggy carrier setup failed."))); stream.once("close", () => reject(new Error("The carrier setup ended before registration.")));
           let buffer = "";
           const observe = (data: Buffer): void => {
@@ -61,9 +69,10 @@ export async function startSsh(config: PinggyConfig, options: ConnectorOptions):
           };
           stream.on("data", observe); stream.stderr.on("data", observe);
         });
-      });
+      }));
       return { publicOrigin: origin, resource: { provider: "pinggy", requestId: options.requestId, id: `pinggy-ssh:${createHash("sha256").update(options.requestId).digest("hex")}`, createdByHost: true }, closed,
-        async close() { for (const stream of streams) stream.destroy(); client.end(); client.destroy(); await closed; } };
-    } catch (error) { client.destroy(); throw error; }
+        async close() { terminate(); await closed; } };
+    } catch (error) { terminate(); throw error; }
+    finally { startup.dispose(); }
   });
 }

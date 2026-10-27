@@ -7,13 +7,21 @@ export async function start(input: ConnectorConfig, options: ConnectorOptions): 
   const config = input as LocaltunnelConfig;
   if (config.host !== undefined) publicOrigin(config.host);
   if (config.subdomain !== undefined && !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u.test(config.subdomain)) invalid("The requested localtunnel name is invalid.");
-  return startWithLifecycle(config, options, "http", async bridge => {
-    const packageName = "localtunnel";
-    const sdk = await import(packageName) as { default: (options: object) => Promise<Tunnel> };
-    const tunnel = await sdk.default({ port: bridge.port, local_host: bridge.host, local_https: false, ...(config.host === undefined ? {} : { host: config.host }), ...(config.subdomain === undefined ? {} : { subdomain: config.subdomain }) });
+  return startWithLifecycle(config, options, "http", async (bridge, signal) => {
+    const packageName = "./client.cjs";
+    const sdk = await import(packageName) as { default: (options: object, callback: (error?: Error) => void) => Tunnel };
+    signal.throwIfAborted();
+    let tunnel!: Tunnel;
+    const opened = new Promise<void>((resolve, reject) => {
+      tunnel = sdk.default({ port: bridge.port, local_host: bridge.host, local_https: false, ...(config.host === undefined ? {} : { host: config.host }), ...(config.subdomain === undefined ? {} : { subdomain: config.subdomain }) }, error => error ? reject(error) : resolve());
+    });
     const closed = new Promise<void>((resolve, reject) => { tunnel.once("close", resolve); tunnel.on("error", () => reject(new Error("The public localtunnel carrier disconnected."))); });
     void closed.catch(() => {});
-    try { publicOrigin(tunnel.url); } catch (error) { tunnel.close(); throw error; }
+    const cancel = (): void => tunnel.close();
+    signal.addEventListener("abort", cancel, { once: true });
+    void closed.finally(() => signal.removeEventListener("abort", cancel)).catch(() => {});
+    try { if (signal.aborted) cancel(); await opened; signal.throwIfAborted(); publicOrigin(tunnel.url); }
+    catch (error) { tunnel.close(); throw error; }
     return { publicOrigin: tunnel.url, resource: { provider: "localtunnel", requestId: options.requestId, id: tunnel.url, createdByHost: true }, closed, async close() { tunnel.close(); await closed; } };
   });
 }

@@ -24,3 +24,16 @@ test('exact original Dev Tunnel material refresh is GET-only, while cleanup requ
 test('Dev Tunnel public configuration rejects control characters before loading a connection',async()=>{
   await assert.rejects(start({provider:'dev-tunnels',tunnelId:'id\nsecret',clusterId:'use',hostAccessToken:'private',publicOrigin:'https://entry.example',port:443},{}),{code:'invalid_argument'});
 });
+
+test('Dev Tunnel resource lookup cancels a stalled response and never waits for its producer cleanup', { timeout: 5000 }, async t => {
+  const original = globalThis.fetch; t.after(() => { globalThis.fetch = original; });
+  let requests = 0, cancelled = 0;
+  globalThis.fetch = async () => {
+    requests++;
+    return new Response(new ReadableStream({ cancel() { cancelled++; return new Promise(() => {}); } }));
+  };
+  await assert.rejects(findDevTunnel({ ...base, deadline: Date.now() - 1 }), { code: 'deadline_exceeded' });
+  assert.equal(requests, 0);
+  await assert.rejects(findDevTunnel({ ...base, deadline: Date.now() + 100 }));
+  assert.equal(requests, 1); assert.equal(cancelled, 1);
+});

@@ -26,3 +26,16 @@ test('name-only discovery cannot establish ownership, delete, or create a replac
   globalThis.fetch=async()=>new Response('',{status:404});
   await assert.rejects(createNamedTunnel({...base,expectedResource:resource}),{code:'outcome_unknown'});
 });
+
+test('named lookups cancel oversized and stalled response producers within the original deadline', { timeout: 5000 }, async t => {
+  const original = globalThis.fetch; t.after(() => { globalThis.fetch = original; });
+  for (const oversized of [true, false]) {
+    let cancelled = 0;
+    globalThis.fetch = async () => new Response(new ReadableStream({
+      start(controller) { if (oversized) controller.enqueue(new Uint8Array(65_537)); },
+      cancel() { cancelled++; return new Promise(() => {}); }
+    }));
+    await assert.rejects(findNamedTunnel({ ...base, deadline: Date.now() + 50 }), { code: 'transport_error' });
+    assert.equal(cancelled, 1);
+  }
+});

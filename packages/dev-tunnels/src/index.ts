@@ -23,7 +23,7 @@ async function readTunnel(manager: Manager, tunnel: Tunnel, options: object): Pr
   try { return await manager.getTunnel(tunnel, options); }
   catch (error) { if ((error as { response?: { status?: number } })?.response?.status === 404) return null; throw error; }
 }
-async function management(accessToken: string): Promise<Manager> {
+async function management(accessToken: string, signal?: AbortSignal): Promise<Manager> {
   boundedText(accessToken, "publisher management token", 8192);
   const name = "@microsoft/dev-tunnels-management";
   const sdk = await import(name) as { TunnelManagementHttpClient: new (...args: unknown[]) => Manager };
@@ -32,15 +32,19 @@ async function management(accessToken: string): Promise<Manager> {
   const adapter = async (config: { url: string; method?: string; headers?: { toJSON?(): object }; data?: string }) => {
     const url = new URL(config.url);
     if (url.protocol !== "https:" || !url.hostname.endsWith(".tunnels.api.visualstudio.com") || url.username || url.password) throw new Error("Unexpected Dev Tunnels management origin.");
-    const response = await fetch(url, { method: config.method?.toUpperCase() ?? "GET", headers: (config.headers?.toJSON?.() ?? config.headers ?? {}) as HeadersInit, ...(config.data === undefined ? {} : { body: config.data }), redirect: "error", signal: AbortSignal.timeout(15_000) });
-    let bytes = 0; const chunks: Uint8Array[] = [];
-    const reader = response.body?.getReader();
-    try { if (reader) for (;;) { const chunk = await reader.read(); if (chunk.done) break; bytes += chunk.value.byteLength; if (bytes > 256 * 1024) { await reader.cancel(); throw new Error("Dev Tunnels response exceeded its boundary."); } chunks.push(chunk.value); } }
-    finally { reader?.releaseLock(); }
-    const data = Buffer.concat(chunks).toString("utf8");
-    const result = { status: response.status, statusText: response.statusText, data, headers: Object.fromEntries(response.headers.entries()), config };
-    if (response.status >= 400) throw Object.assign(new Error("Dev Tunnels API rejected the operation."), { response: result, isAxiosError: true, config });
-    return result;
+    const request = createOperationScope({ ...(signal ? { signal } : {}), deadline: Date.now() + 15_000 });
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    try {
+      request.check();
+      const response = await request.wait(fetch(url, { method: config.method?.toUpperCase() ?? "GET", headers: (config.headers?.toJSON?.() ?? config.headers ?? {}) as HeadersInit, ...(config.data === undefined ? {} : { body: config.data }), redirect: "error", signal: request.signal }));
+      let bytes = 0; const chunks: Uint8Array[] = [];
+      reader = response.body?.getReader();
+      if (reader) for (;;) { const chunk = await request.wait(reader.read()); if (chunk.done) break; bytes += chunk.value.byteLength; if (bytes > 256 * 1024) throw new Error("Dev Tunnels response exceeded its boundary."); chunks.push(chunk.value); }
+      const data = Buffer.concat(chunks).toString("utf8");
+      const result = { status: response.status, statusText: response.statusText, data, headers: Object.fromEntries(response.headers.entries()), config };
+      if (response.status >= 400) throw Object.assign(new Error("Dev Tunnels API rejected the operation."), { response: result, isAxiosError: true, config });
+      return result;
+    } finally { if (reader) { void reader.cancel().catch(() => {}); reader.releaseLock(); } request.dispose(); }
   };
   const result = new sdk.TunnelManagementHttpClient({ name: "linkspan", version: "0.1.0" }, "2023-09-27-preview", async () => accessToken, undefined, undefined, adapter);
   result.enableEventsReporting = false; result.trace = () => {};
@@ -73,9 +77,10 @@ function expectedLookup(options: DevTunnelResourceOptions): Tunnel {
  * queryable without reserving a second tunnel or renaming another user's one. */
 export async function findDevTunnel(options: DevTunnelResourceOptions): Promise<DevTunnelResource | DevTunnelCandidate | null> {
   const lookup = expectedLookup(options);
-  const manager = await management(options.publisherAccessToken);
   const scope = createOperationScope(options);
+  let manager: Manager | undefined;
   try {
+    scope.check(); manager = await management(options.publisherAccessToken, scope.signal); scope.check();
     const tunnel = await scope.wait(readTunnel(manager, lookup, { includePorts: true, includeAccessControl: true, followRedirects: false }));
     if (!tunnel) return null;
     const found = inspectResource(tunnel, options);
@@ -83,15 +88,16 @@ export async function findDevTunnel(options: DevTunnelResourceOptions): Promise<
     if (found.tunnelId !== options.expectedResource.tunnelId) throw new LinkspanError("identity_mismatch", "The original Dev Tunnel identity changed.");
     return Object.freeze({ ...options.expectedResource });
   } catch (error) { if (error instanceof LinkspanError) throw error; throw new LinkspanError("transport_error", "The Dev Tunnel ownership lookup failed."); }
-  finally { scope.dispose(); await manager.dispose(); }
+  finally { scope.dispose(); await manager?.dispose(); }
 }
 
 export async function createDevTunnel(options: DevTunnelResourceOptions): Promise<{ readonly resource: DevTunnelResource; readonly hostAccessToken: string; readonly publicOrigin: string }> {
   if (!Number.isInteger(options.port) || options.port < 1 || options.port > 65535) invalid("A valid single forwarded port is required.");
-  const manager = await management(options.publisherAccessToken);
   const scope = createOperationScope(options);
+  let manager: Manager | undefined;
   let sent = false;
   try {
+    scope.check(); manager = await management(options.publisherAccessToken, scope.signal); scope.check();
     const lookup = expectedLookup(options);
     let tunnel = await scope.wait(readTunnel(manager, lookup, { includePorts: true, includeAccessControl: true, tokenScopes: ["host"], followRedirects: false }));
     if (tunnel && options.expectedResource === undefined) throw new LinkspanError("outcome_unknown", "A name/label-only match cannot establish ownership or authorize a replacement create.", { outcome: "unknown" });
@@ -110,20 +116,21 @@ export async function createDevTunnel(options: DevTunnelResourceOptions): Promis
   } catch (error) {
     if (error instanceof LinkspanError && (error.code === "outcome_unknown" || (!sent && error.code === "identity_mismatch"))) throw error;
     throw new LinkspanError(sent ? "outcome_unknown" : "transport_error", "The Dev Tunnel operation did not confirm; query its original ownership label before retrying.", { outcome: sent ? "unknown" : "not_sent" });
-  } finally { scope.dispose(); await manager.dispose(); }
+  } finally { scope.dispose(); await manager?.dispose(); }
 }
 
 export async function deleteDevTunnel(options: DevTunnelResourceOptions & { readonly resource: DevTunnelResource }): Promise<void> {
   const resource = options.resource;
   if (!resource.createdByHost || resource.requestId !== options.requestId || resource.clusterId !== options.clusterId || resource.ownershipLabel !== ownership(options.requestId) || resource.port !== options.port) invalid("Only the exact owned Dev Tunnel can be deleted.");
-  const manager = await management(options.publisherAccessToken); const scope = createOperationScope(options);
+  const scope = createOperationScope(options); let manager: Manager | undefined;
   try {
+    scope.check(); manager = await management(options.publisherAccessToken, scope.signal); scope.check();
     const tunnel = await scope.wait(readTunnel(manager, { tunnelId: resource.tunnelId, clusterId: resource.clusterId }, { includePorts: true, includeAccessControl: true, followRedirects: false }));
     if (!tunnel) return;
     if (inspectResource(tunnel, options).tunnelId !== resource.tunnelId) throw new LinkspanError("identity_mismatch", "The Dev Tunnel identity changed.");
     await scope.wait(manager.deleteTunnel({ tunnelId: resource.tunnelId, clusterId: resource.clusterId }, { followRedirects: false }));
   } catch (error) { if (error instanceof LinkspanError && error.code === "identity_mismatch") throw error; throw new LinkspanError("outcome_unknown", "Dev Tunnel cleanup was not confirmed.", { outcome: "unknown" }); }
-  finally { scope.dispose(); await manager.dispose(); }
+  finally { scope.dispose(); await manager?.dispose(); }
 }
 
 /** Exact-ID read-only material refresh. A missing original resource always fails
@@ -139,17 +146,18 @@ export async function start(input: ConnectorConfig, options: ConnectorOptions): 
   const config = input as DevTunnelsConfig;
   boundedText(config.tunnelId, "tunnel ID", 128); boundedText(config.clusterId, "cluster ID", 64); boundedText(config.hostAccessToken, "host access token", 8192); publicOrigin(config.publicOrigin);
   if (!Number.isInteger(config.port) || config.port < 1 || config.port > 65535) invalid("The approved forwarded port is invalid.");
-  return startWithLifecycle(config, options, "http", async bridge => {
-    const manager = await management(`tunnel ${config.hostAccessToken}`);
+  return startWithLifecycle(config, options, "http", async (bridge, signal) => {
+    signal.throwIfAborted();
+    const manager = await management(`tunnel ${config.hostAccessToken}`, signal);
     const name = "@microsoft/dev-tunnels-connections";
     const sdk = await import(name) as { TunnelRelayTunnelHost: new (...args: unknown[]) => any; ConnectionStatus: { Disconnected: string } };
     const forwarders: { dispose(): void }[] = [];
     class FixedOriginHost extends sdk.TunnelRelayTunnelHost {
       async forwardPort(pfs: any, port: Port): Promise<void> {
-        if (port.portNumber !== config.port) return;
+        if (signal.aborted || port.portNumber !== config.port) return;
         if (pfs.localForwardedPorts.find((value: { localPort: number }) => value.localPort === bridge.port)) return;
         const forwarder = await pfs.forwardFromRemotePort("127.0.0.1", config.port, bridge.host, bridge.port);
-        if (forwarder) forwarders.push(forwarder);
+        if (forwarder) { if (signal.aborted) forwarder.dispose(); else forwarders.push(forwarder); }
       }
     }
     const host = new FixedOriginHost(manager, () => {});
@@ -158,10 +166,26 @@ export async function start(input: ConnectorConfig, options: ConnectorOptions): 
     host.forwardedPortConnecting((event: { port: number; transformPromise?: Promise<null> }) => { if (event.port !== config.port) event.transformPromise = Promise.resolve(null); });
     let resolveClosed!: () => void; const closed = new Promise<void>(resolve => { resolveClosed = resolve; });
     host.connectionStatusChanged((event: { status: string }) => { if (event.status === sdk.ConnectionStatus.Disconnected) resolveClosed(); });
+    let closing: Promise<void> | undefined;
+    const close = (): Promise<void> => {
+      if (closing) return closing;
+      const pending = (async () => {
+        for (const forwarder of forwarders) forwarder.dispose();
+        await host.dispose(); await manager.dispose();
+        signal.removeEventListener("abort", cancel); resolveClosed();
+      })();
+      closing = pending;
+      void pending.catch(() => { if (closing === pending) closing = undefined; });
+      return pending;
+    };
+    const cancel = (): void => { void close().catch(() => {}); };
+    signal.addEventListener("abort", cancel, { once: true });
     try {
+      signal.throwIfAborted();
       await host.connect({ tunnelId: config.tunnelId, clusterId: config.clusterId, accessTokens: { host: config.hostAccessToken }, ports: [{ portNumber: config.port, protocol: "http", accessControl: anonymousAccess() }], accessControl: anonymousAccess() }, { enableRetry: false, keepAliveIntervalInSeconds: 15 });
-    } catch (error) { await host.dispose(); await manager.dispose(); throw error; }
+      signal.throwIfAborted();
+    } catch (error) { await close(); throw error; }
     return { publicOrigin: config.publicOrigin, resource: { provider: "dev-tunnels", requestId: options.requestId, id: `${config.clusterId}:${config.tunnelId}:${config.port}`, createdByHost: false }, closed,
-      async close() { for (const forwarder of forwarders) forwarder.dispose(); try { await host.dispose(); } finally { await manager.dispose(); resolveClosed(); } } };
+      close };
   });
 }

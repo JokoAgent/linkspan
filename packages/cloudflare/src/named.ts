@@ -35,7 +35,7 @@ async function request(options: CloudflareApiOptions, path: string, method: "GET
       throw new LinkspanError(denied ? "authentication_failed" : method === "GET" ? "transport_error" : "outcome_unknown", "The named-tunnel resource API did not confirm the operation.", { outcome: denied || method === "GET" ? "not_sent" : "unknown" });
     }
     const reader = response.body?.getReader(); let text = ""; let bytes = 0;
-    if (reader) { const decoder = new TextDecoder(); try { for (;;) { const chunk = await reader.read(); if (chunk.done) break; bytes += chunk.value.byteLength; if (bytes > 65_536) throw new Error(); text += decoder.decode(chunk.value, { stream: true }); } text += decoder.decode(); } finally { reader.releaseLock(); } }
+    if (reader) { const decoder = new TextDecoder(); try { for (;;) { const chunk = await scope.wait(reader.read()); if (chunk.done) break; bytes += chunk.value.byteLength; if (bytes > 65_536) throw new Error(); text += decoder.decode(chunk.value, { stream: true }); } text += decoder.decode(); } finally { void reader.cancel().catch(() => {}); reader.releaseLock(); } }
     const value = JSON.parse(text) as { success?: boolean; result?: unknown };
     if (value.success !== true) throw new LinkspanError("transport_error", "The resource API did not confirm success.");
     return value.result;
