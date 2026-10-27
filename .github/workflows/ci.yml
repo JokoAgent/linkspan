@@ -77,6 +77,8 @@ jobs:
         run: node --input-type=module -e "import {resolve} from 'node:path'; import {prepareCloudflared} from './packages/cloudflare/dist/index.js'; await prepareCloudflared({directory:resolve('.runtime/helpers')});"
       - name: Verify consumer packages and required notices
         run: pnpm pack:artifacts
+      - name: Verify development consumers built from source
+        run: pnpm build:consumers .runtime/source-consumers
       - uses: actions/upload-artifact@v4
         with:
           name: linkspan-packages-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}

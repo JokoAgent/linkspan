@@ -85,5 +85,14 @@ pnpm install --frozen-lockfile
 pnpm check
 ```
 
-`pnpm pack:artifacts` verifies optional distribution packages and their notices.
-The consuming project selects its dependency source and update workflow.
+For source consumers, provide Git, Go and rustup, install dependencies, then run
+`pnpm build:consumers <empty-output-directory>`. It builds the JavaScript and browser runtimes and emits
+ordinary package directories with source provenance. Internal development
+dependencies accept the consumer's selected source packages without requiring a
+published version. The builder installs its Rust target and selects its Go
+toolchain; it does not change global toolchain defaults.
+
+`pnpm pack:artifacts` separately verifies distributable packages and required
+notices. Neither command publishes packages or creates release tags. Runtime
+never downloads library code or helpers.
+
