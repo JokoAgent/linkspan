@@ -187,7 +187,7 @@ function createNativeIrohRuntime(sdk:Sdk):IrohRuntime {
       let endpoint: Endpoint | undefined;
       let expiryTimer:ReturnType<typeof setTimeout> | undefined;
       let renewalTimer:ReturnType<typeof setTimeout> | undefined;
-      const cancel = () => { void endpoint?.close(); };
+      const cancel = () => { void endpoint?.close().catch(() => {}); };
       scope.signal.addEventListener("abort", cancel, { once: true });
       try {
         scope.check();
@@ -206,21 +206,35 @@ function createNativeIrohRuntime(sdk:Sdk):IrohRuntime {
           const {servicesApiSecret:_publisher,...rest}=config;
           config={...rest,secretKey:secret,relayToken:lease.relayToken,relayTokenExpiresAt:lease.expiresAt};
         }
-        const own:Endpoint = await scope.wait(bind(config).then(value=>{if(scope.signal.aborted)void value.close();return value;}));
+        const own:Endpoint = await scope.wait(bind(config).then(value=>{if(scope.signal.aborted)void value.close().catch(()=>{});return value;}));
         endpoint=own;
         if (options.relayUrls?.length !== 0) await scope.wait(own.online());
         const streams = new Set<PeerStream>();
         let accepting = false;
         let ended=false;
-        const ownerAbort=()=>{void close();};
-        const close = async () => {if(ended)return;ended=true;if(expiryTimer!==undefined)clearTimeout(expiryTimer);if(renewalTimer!==undefined)clearTimeout(renewalTimer);options.signal?.removeEventListener("abort",ownerAbort); for (const stream of streams) stream.abort(); streams.clear(); await own.close(); };
+        let closing:Promise<void>|undefined;
+        const ownerAbort=()=>{void close().catch(()=>{});};
+        const close = ():Promise<void> => {
+          if(closing)return closing;
+          ended=true;
+          if(expiryTimer!==undefined)clearTimeout(expiryTimer);
+          if(renewalTimer!==undefined)clearTimeout(renewalTimer);
+          options.signal?.removeEventListener("abort",ownerAbort);
+          for(const stream of streams)stream.abort();
+          streams.clear();
+          const pending=Promise.resolve().then(()=>own.close());
+          closing=pending;
+          // Keep the original endpoint on failure so explicit cleanup can retry.
+          void pending.catch(()=>{if(closing===pending)closing=undefined;});
+          return pending;
+        };
         const scheduleLease=()=>{
           if(leaseExpiry===undefined||ended)return;
           if(expiryTimer!==undefined)clearTimeout(expiryTimer);
-          expiryTimer=setTimeout(()=>{void close();},Math.max(0,leaseExpiry-Date.now()));
+          expiryTimer=setTimeout(ownerAbort,Math.max(0,leaseExpiry-Date.now()));
           if(mint!==undefined)renewalTimer=setTimeout(()=>{void(async()=>{
             try{const lease=await mint!();if(ended)return;for(const url of options.relayUrls!){if(ended)return;await own.insertRelay({url,authToken:lease.relayToken});}if(ended)return;leaseExpiry=lease.expiresAt;scheduleLease();}
-            catch{await close();}
+            catch{ownerAbort();}
           })();},Math.max(1,leaseExpiry-Date.now()-Math.min(30000,ttl*100)));
         };
         scheduleLease();
@@ -228,15 +242,16 @@ function createNativeIrohRuntime(sdk:Sdk):IrohRuntime {
         return {
           endpointId: own.id().toString(), ticket: sdk.EndpointTicket.fromAddr(own.addr()).toString(),
           async accept(acceptOptions: OperationOptions = {}) {
+            if(ended)return null;
             if (accepting) throw new LinkspanError("invalid_argument", "Only one listener accept may be pending");
             accepting = true;
             const attempt = createOperationScope(acceptOptions);
-            const cancelled = () => { void close(); };
+            const cancelled = ownerAbort;
             attempt.signal.addEventListener("abort", cancelled, { once: true });
             try {
               for(;;){
                 attempt.check();
-                const incoming=await attempt.wait(own.acceptNext());if(incoming===null)return null;
+                const incoming=await attempt.wait(own.acceptNext());if(incoming===null||ended)return null;
                 const peer=createOperationScope({signal:attempt.signal,deadline:Math.min(acceptOptions.deadline??Infinity,Date.now()+10000)});
                 let connection:Connection|undefined;
                 try{
@@ -244,6 +259,7 @@ function createNativeIrohRuntime(sdk:Sdk):IrohRuntime {
                   const current:Connection=await peer.wait(pending.connect().then(value=>{if(peer.signal.aborted)value.close(1n,[]);return value;}));
                   connection=current;
                   const bi=await peer.wait(current.acceptBi());
+                  if(ended){current.close(1n,[]);return null;}
                   let stream:PeerStream;stream=carrier(current,bi,async()=>{streams.delete(stream);});streams.add(stream);return stream;
                 }catch{connection?.close(1n,[]);attempt.check();if(ended)return null;await attempt.wait(new Promise<void>(resolve=>setTimeout(resolve,10)));}
                 finally{peer.dispose();}

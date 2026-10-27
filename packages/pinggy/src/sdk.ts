@@ -61,7 +61,13 @@ export async function openSdkTunnel(sdk: Sdk, input: {
   });
   void closed.catch(() => {});
   let closing: Promise<void> | undefined;
-  const close = () => closing ??= (async () => { await tunnel.stop(); resolveClosed(); })();
+  const close = (): Promise<void> => {
+    if (closing) return closing;
+    const pending = Promise.resolve().then(async () => { await tunnel.stop(); resolveClosed(); });
+    closing = pending;
+    void pending.catch(() => { if (closing === pending) closing = undefined; });
+    return pending;
+  };
   const cancel = () => { void close().catch(() => {}); };
   input.signal?.addEventListener("abort", cancel, { once: true });
   void closed.finally(() => input.signal?.removeEventListener("abort", cancel)).catch(() => {});

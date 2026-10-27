@@ -286,10 +286,17 @@ async function startPinggyMapping(config: PinggyDatagramConfig, options: Datagra
   type Carrier = { resource: ConnectorResource; publicHost: string; publicPort: number; closed: Promise<void>; close(): Promise<void> };
   let carrier: Carrier | undefined; let stopped = false; let closing: Promise<void> | undefined;
   const shutdown = new AbortController();
-  const close = () => closing ??= (async () => {
-    stopped = true; shutdown.abort(); scope.signal.removeEventListener("abort", abort); scope.dispose();
-    await bridge.close(); if (carrier) await boundedClose(carrier.close);
-  })();
+  const close = (): Promise<void> => {
+    stopped = true; shutdown.abort();
+    if (closing) return closing;
+    const pending = (async () => {
+      scope.signal.removeEventListener("abort", abort); scope.dispose();
+      await bridge.close(); if (carrier) await boundedClose(carrier.close);
+    })();
+    closing = pending;
+    void pending.catch(() => { if (closing === pending) closing = undefined; });
+    return pending;
+  };
   const abort = () => { void close().catch(() => {}); };
   scope.signal.addEventListener("abort", abort, { once: true }); void bridge.exhausted.then(abort);
   const startup = createOperationScope({ signal: scope.signal, deadline: Math.min(expiresAt, Date.now() + (options.startupTimeoutMs ?? 60_000)) });
