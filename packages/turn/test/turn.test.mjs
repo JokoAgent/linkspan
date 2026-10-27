@@ -3,7 +3,12 @@ import { createHmac } from 'node:crypto';
 import test from 'node:test';
 import { issueCoturnRestCredentials } from '../dist/coturn.js';
 import { issueTwilioTurnCredentials } from '../dist/twilio.js';
-import { retireExpiringTurnResource } from '../dist/index.js';
+import { retireExpiringTurnResource, validateTurnUrl } from '../dist/index.js';
+
+test('TURN URL validation rejects secure UDP transports regardless of case', () => {
+  for (const url of ['https://relay.example', 'turn:relay.example:99999', 'turns:relay.example:443?transport=udp', 'TURNS:relay.example:443?transport=UDP']) assert.equal(validateTurnUrl(url), false);
+  for (const url of ['turn:relay.example:3478?transport=udp', 'turn:relay.example:443?transport=tcp', 'turns:relay.example:443?transport=tcp', 'TURNS:relay.example:443?transport=TCP']) assert.equal(validateTurnUrl(url), true);
+});
 
 const accountSid = `AC${'a'.repeat(32)}`;
 const request = { requestId: 'original-operation', ttlSeconds: 600 };

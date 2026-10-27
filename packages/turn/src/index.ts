@@ -45,7 +45,7 @@ export function validateTurnUrl(value: unknown): value is string {
   return typeof value === "string" && value.length <= 512
     && /^turns?:(?:[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?|\[[a-f0-9:]+\]):(?:[1-9][0-9]{0,4})(?:\?transport=(?:tcp|udp))?$/iu.test(value)
     && Number(value.match(/\]?:([0-9]+)(?:\?|$)/u)?.[1]) <= 65535
-    && (!value.startsWith("turns:") || !value.endsWith("transport=udp"));
+    && !/^turns:.*\?transport=udp$/iu.test(value);
 }
 /** Local retirement never claims that the provider has revoked a token. */
 export function retireExpiringTurnResource(resource: ExpiringTurnResource, ownership: {
